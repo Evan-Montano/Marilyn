@@ -9,22 +9,43 @@
 /// to make sure we aren't processing the same characters
 /// many times over through the sliding window.
 /// </summary>
-struct eyeCandy {
+struct EyeCandy {
 	char ch;
 	bool proc;
 };
 
-const char EMPTY_KEY[8] = "0000000";
+struct Neuron {
+	std::string key;
+	char ch;
+	uint32_t frequency;
+	uint64_t position;
+	std::string parentKey;
+};
+
+const char EMPTY_KEY[8] = 
+	{ '0', '0', '0', '0', '0', '0', '0', '0' };
 const int NEURON_DEPTH = 20;
+const size_t KEY_SIZE = 8;
+const size_t CHAR_SIZE = 1;
 
 std::string generate8ByteKey();
 
-class BrainSignal {
+class Brain {
 public:
 	bool initTraining();
 	void processAttachedFile();
 private:
 	std::ifstream eyes;
-	std::ofstream memoryWriter;
-	std::ofstream neuronWriter;
+	std::fstream memoryWorker;
+	std::fstream neuronWorker;
+
+	Neuron getNeuronByTargetAndParentKey(
+		std::string parentKey,
+		char targetChar,
+		bool increment,
+		bool createIfNotFound);
+	
+	void resetWorkerPos(std::fstream& worker);
+	Neuron writeNewMemory(Neuron &n);
+	Neuron readMemory();
 };
