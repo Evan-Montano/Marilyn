@@ -2,11 +2,10 @@
 #include "Train.h"
 #include "DataHelper.h"
 
-Brain sig;
-
+Brain noLumpsOrBumps;
 void initTrainModule() {
-	sig.initTraining();
-	sig.processAttachedFile();
+	noLumpsOrBumps.initTraining();
+	noLumpsOrBumps.processAttachedFile();
 }
 
 bool Brain::initTraining() {

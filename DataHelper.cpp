@@ -45,20 +45,48 @@ Neuron Brain::getNeuronByTargetAndParentKey(
 	bool notFound = false;
 	while (!notFound) {
 		res = readMemory();
-		notFound = res.key == EMPTY_KEY;
+		bool notFound = (res.key.size() != KEY_SIZE ||
+			std::memcmp(res.key.data(), EMPTY_KEY, KEY_SIZE) == 0);
 
-		if (!notFound && res.ch == targetChar && res.parentKey == parentKey) break;
+		if (notFound || (res.ch == targetChar && res.parentKey == parentKey)) break;
 	}
 
 	if (notFound && createIfNotFound) {
 		Neuron newNeuron{ EMPTY_KEY, targetChar, 0, 0, parentKey };
 		res = writeNewMemory(newNeuron);
 	}
-	else if (increment) {
-
+	else if (!notFound && increment) {
+		res = incrementMemory(res);
 	}
 
 	return res;
+}
+
+/// <summary>
+/// Increments the frequency of the current memory.
+/// We should already have the exact position of the memory.
+/// </summary>
+/// <param name="n"></param>
+/// <returns></returns>
+Neuron Brain::incrementMemory(Neuron& n) {
+	if (std::memcmp(n.key.data(), EMPTY_KEY, KEY_SIZE) != 0) {
+		memoryWorker.clear();
+		memoryWorker.seekp(n.position, std::ios::beg);
+		memoryWorker.seekp((KEY_SIZE + CHAR_SIZE), std::ios::cur);
+		memoryWorker.seekg(n.position, std::ios::beg);
+		memoryWorker.seekg((KEY_SIZE + CHAR_SIZE), std::ios::cur);
+
+		uint32_t tmpFreq;
+		if (memoryWorker.read(reinterpret_cast<char*>(&tmpFreq), sizeof(tmpFreq))) {
+			if (tmpFreq == n.frequency) {
+				++tmpFreq;
+				if (memoryWorker.write(reinterpret_cast<char*>(&tmpFreq), sizeof(tmpFreq))) {
+					++n.frequency;
+				}
+			}
+		}
+	}
+	return n;
 }
 
 void Brain::resetWorkerPos(std::fstream &worker) {
@@ -150,6 +178,51 @@ Neuron Brain::writeNewMemory(Neuron& n) {
 	memoryWorker.flush();
 
 	return n;
+}
+
+void Brain::getMeow(std::string &userInput) {
+	std::vector<char> characterStream;
+	const size_t maxChars = NEURON_DEPTH - 1;
+	const size_t start =
+		userInput.size() > maxChars ? userInput.size() - maxChars : 0;
+
+	characterStream.insert(
+		characterStream.begin(),
+		userInput.begin() + start,
+		userInput.end()
+	);
+
+	//char nextChar = '\0';
+	for (size_t i = 0; i < characterStream.size()-1; ++i) {
+		resetWorkerPos(neuronWorker);
+		// getting root node
+		Neuron nextChar = getNeuronByTargetAndParentKey(
+			EMPTY_KEY, characterStream[i], false, false);
+
+		for (size_t j = i + 1; j < characterStream.size(); ++j) {
+			// if we are at the end of the character stream, search for the next character
+			if (j == characterStream.size() - 1) {
+				/*nextChar = getNeuronByTargetAndParentKey(
+					nextChar.key, characterStream[j], false, false);*/
+				nextChar = getNextHighestMeow(nextChar.key);
+			}
+			else {
+				nextChar = getNeuronByTargetAndParentKey(
+					nextChar.key, characterStream[j], false, false);
+			}
+		}
+
+		if (i >= characterStream.size() - 2) {
+			if (characterStream.size() >= NEURON_DEPTH) {
+				characterStream.erase(characterStream.begin());
+			}
+			characterStream.push_back(nextChar.ch);
+		}
+	}
+}
+
+Neuron Brain::getNextHighestMeow(std::string parentKey) {
+	return Neuron { EMPTY_KEY, '\0', 0, 0, EMPTY_KEY };
 }
 
 //NOTES:

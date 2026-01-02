@@ -22,8 +22,8 @@ struct Neuron {
 	std::string parentKey;
 };
 
-const char EMPTY_KEY[8] = 
-	{ '0', '0', '0', '0', '0', '0', '0', '0' };
+const char EMPTY_KEY[9] =
+	{ '0','0','0','0','0','0','0','0','\0' };
 const int NEURON_DEPTH = 20;
 const size_t KEY_SIZE = 8;
 const size_t CHAR_SIZE = 1;
@@ -33,7 +33,9 @@ std::string generate8ByteKey();
 class Brain {
 public:
 	bool initTraining();
+	bool initChat();
 	void processAttachedFile();
+	void beginChat();
 private:
 	std::ifstream eyes;
 	std::fstream memoryWorker;
@@ -48,4 +50,7 @@ private:
 	void resetWorkerPos(std::fstream& worker);
 	Neuron writeNewMemory(Neuron &n);
 	Neuron readMemory();
+	Neuron incrementMemory(Neuron& n);
+	void getMeow(std::string &userInput);
+	Neuron getNextHighestMeow(std::string parentKey);
 };
