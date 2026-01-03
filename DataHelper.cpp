@@ -45,7 +45,7 @@ Neuron Brain::getNeuronByTargetAndParentKey(
 	bool notFound = false;
 	while (!notFound) {
 		res = readMemory();
-		bool notFound = (res.key.size() != KEY_SIZE ||
+		notFound = (res.key.size() != KEY_SIZE ||
 			std::memcmp(res.key.data(), EMPTY_KEY, KEY_SIZE) == 0);
 
 		if (notFound || (res.ch == targetChar && res.parentKey == parentKey)) break;
@@ -181,6 +181,8 @@ Neuron Brain::writeNewMemory(Neuron& n) {
 }
 
 void Brain::getMeow(std::string &userInput) {
+	std::cout << ">>";
+
 	std::vector<char> characterStream;
 	const size_t maxChars = NEURON_DEPTH - 1;
 	const size_t start =
@@ -192,37 +194,58 @@ void Brain::getMeow(std::string &userInput) {
 		userInput.end()
 	);
 
-	//char nextChar = '\0';
+	//Neuron bestMeow{ EMPTY_KEY, '\0', 0, 0, EMPTY_KEY };
 	for (size_t i = 0; i < characterStream.size()-1; ++i) {
 		resetWorkerPos(neuronWorker);
 		// getting root node
 		Neuron nextChar = getNeuronByTargetAndParentKey(
 			EMPTY_KEY, characterStream[i], false, false);
 
-		for (size_t j = i + 1; j < characterStream.size(); ++j) {
+		for (size_t j = i + 1; j <= characterStream.size(); ++j) {
 			// if we are at the end of the character stream, search for the next character
-			if (j == characterStream.size() - 1) {
-				/*nextChar = getNeuronByTargetAndParentKey(
-					nextChar.key, characterStream[j], false, false);*/
+			if (j >= characterStream.size()) {
 				nextChar = getNextHighestMeow(nextChar.key);
+				if (nextChar.ch == '\0') return;
+				
+				// print the next meow
+				std::cout << nextChar.ch;
+
+				if (characterStream.size() >= NEURON_DEPTH) {
+					characterStream.erase(characterStream.begin());
+				}
+				characterStream.push_back(nextChar.ch);
 			}
 			else {
 				nextChar = getNeuronByTargetAndParentKey(
 					nextChar.key, characterStream[j], false, false);
+				if (nextChar.ch == '\0' && nextChar.key == EMPTY_KEY) break;
 			}
-		}
-
-		if (i >= characterStream.size() - 2) {
-			if (characterStream.size() >= NEURON_DEPTH) {
-				characterStream.erase(characterStream.begin());
-			}
-			characterStream.push_back(nextChar.ch);
 		}
 	}
 }
 
 Neuron Brain::getNextHighestMeow(std::string parentKey) {
-	return Neuron { EMPTY_KEY, '\0', 0, 0, EMPTY_KEY };
+	Neuron res { EMPTY_KEY, '\0', 0, 0, parentKey };
+	std::vector<Neuron> matches;
+	resetWorkerPos(neuronWorker);
+
+	bool eof = false;
+	while (!eof) {
+		Neuron tmp = readMemory();
+		eof = ((tmp.key.size() != KEY_SIZE) || (tmp.ch == '\0'));
+		if (!eof && tmp.parentKey == parentKey) {
+			matches.push_back(tmp);
+		}
+	}
+
+	// Get the highest frequency
+	for (Neuron n : matches) {
+		if (n.frequency > res.frequency) {
+			res = n;
+		}
+	}
+
+	return res;
 }
 
 //NOTES:

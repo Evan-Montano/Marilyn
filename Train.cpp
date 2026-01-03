@@ -51,27 +51,23 @@ void Brain::processAttachedFile() {
 		}
 		window.push_back(EyeCandy{ c, false });
 
-		for (size_t n = 0; n < window.size(); ++n) {
-			// if this is false, then we are only appending new nodes
-			// and setting their frequency to 1
-			bool processExisting = !window.at(n).proc;
-			// if true, then we can append new nodes, and increment the
-			// frequency of existing nodes, if found.
-
+		for (size_t n = 0; n < window.size(); n++) {
 			std::string parentKey = EMPTY_KEY;
-			for (size_t j = n; j < window.size(); ++j) {
+			for (size_t j = n; j < window.size(); j++) {
 				// if the parent key is empty, we should first search
 				// for a root node with the same char, and assign the parentKey
 				// for subsequent searches.
 				// Create new if doesn't exist.
 				if (parentKey == EMPTY_KEY) {
-					Neuron result = getNeuronByTargetAndParentKey(EMPTY_KEY, c, false, true);
+					Neuron result = getNeuronByTargetAndParentKey(EMPTY_KEY, window.at(j).ch, false, true);
 					parentKey = result.key;
 				}
 				// ensure the current parentKey is valid 8-bytes
 				else if (parentKey.size() == 8) {
 					// we are searching for a child node
-					Neuron result = getNeuronByTargetAndParentKey(parentKey, c, processExisting, true);
+					// if a node hasn't been processed as a child, incrememnt it if found
+					Neuron result = getNeuronByTargetAndParentKey(parentKey, window.at(j).ch, !window.at(j).proc, true);
+					window.at(j).proc = true;
 					parentKey = result.key;
 				}
 				else {

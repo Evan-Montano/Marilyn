@@ -28,9 +28,9 @@ bool Brain::initChat() {
 
 void Brain::beginChat() {
 	std::cout << "Thanks for talking to my cat Marilyn. Just know that she doesn't understand English that well :)"
-		<< std::endl << "Enter '0' to exit." << std::endl;
+		<< std::endl << "Enter 'exit' to leave." << std::endl;
 
-	while (userChat != "0") {
+	while (userChat != "exit") {
 		std::cout << std::endl << ">>";
 		std::getline(std::cin, userChat);
 		if (userChat.size() == 0) continue;
