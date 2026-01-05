@@ -5,10 +5,13 @@
 Brain noLumpsOrBumps;
 void initTrainModule() {
 	noLumpsOrBumps.initTraining();
+
+	std::cout << "Beginning file processing. This *WILL take a long time.." << std::endl;
 	noLumpsOrBumps.processAttachedFile();
 }
 
 bool Brain::initTraining() {
+	std::cout << "Text (.txt) files only, please. ";
 	std::cout << std::endl << "Paste the file path: ";
 	std::string path;
 

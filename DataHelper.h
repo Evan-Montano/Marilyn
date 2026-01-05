@@ -24,7 +24,7 @@ struct Neuron {
 
 const char EMPTY_KEY[9] =
 	{ '0','0','0','0','0','0','0','0','\0' };
-const int NEURON_DEPTH = 20;
+const int NEURON_DEPTH = 100;
 const size_t KEY_SIZE = 8;
 const size_t CHAR_SIZE = 1;
 
