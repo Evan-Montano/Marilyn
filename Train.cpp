@@ -42,13 +42,41 @@ bool Brain::initTraining() {
 	return true;
 }
 
+std::streampos getFileSize(std::ifstream& file) {
+	auto current = file.tellg();
+	file.seekg(0, std::ios::end);
+	auto size = file.tellg();
+	file.seekg(current, std::ios::beg);
+	return size;
+}
+
 void Brain::processAttachedFile() {
 	typedef std::istreambuf_iterator<char> buf_iter;
 	std::vector<EyeCandy> window;
 
+	const std::streampos totalBytes = getFileSize(eyes);
+	std::uint64_t bytesProcessed = 0;
+
+	const std::streampos reportEvery = totalBytes / 100; // 1% granularity
+	std::streampos nextReport = reportEvery;
+
 	for (buf_iter i(eyes), e; i != e; ++i) {
 		char c = *i;
+		++bytesProcessed;
+
+		if (bytesProcessed >= nextReport) {
+			double percent =
+				(double(bytesProcessed) / double(totalBytes)) * 100.0;
+
+			std::cout << "\rProcessing: "
+				<< std::fixed << std::setprecision(1)
+				<< percent << "%" << std::flush;
+
+			nextReport += reportEvery;
+		}
+
 		if (c == '\n') continue;
+
 		if (window.size() >= NEURON_DEPTH) {
 			window.erase(window.begin());
 		}
@@ -74,12 +102,11 @@ void Brain::processAttachedFile() {
 					parentKey = result.key;
 				}
 				else {
-					// Clear the window and try again, something went wrong... :(
 					window.clear();
 				}
 			}
-
-			window.at(n).proc = true;
 		}
 	}
+
+	std::cout << "\rProcessing: 100.0%\n";
 }

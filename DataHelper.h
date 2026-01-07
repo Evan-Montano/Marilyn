@@ -24,7 +24,7 @@ struct Neuron {
 
 const char EMPTY_KEY[9] =
 	{ '0','0','0','0','0','0','0','0','\0' };
-const int NEURON_DEPTH = 100;
+const int NEURON_DEPTH = 50;
 const size_t KEY_SIZE = 8;
 const size_t CHAR_SIZE = 1;
 
@@ -36,6 +36,7 @@ public:
 	bool initChat();
 	void processAttachedFile();
 	void beginChat();
+	std::string getHighestNeruon();
 private:
 	std::ifstream eyes;
 	std::fstream memoryWorker;

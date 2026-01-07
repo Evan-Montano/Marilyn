@@ -71,23 +71,34 @@ Neuron Brain::getNeuronByTargetAndParentKey(
 Neuron Brain::incrementMemory(Neuron& n) {
 	if (std::memcmp(n.key.data(), EMPTY_KEY, KEY_SIZE) != 0) {
 		memoryWorker.clear();
-		memoryWorker.seekp(n.position, std::ios::beg);
-		memoryWorker.seekp((KEY_SIZE + CHAR_SIZE), std::ios::cur);
-		memoryWorker.seekg(n.position, std::ios::beg);
-		memoryWorker.seekg((KEY_SIZE + CHAR_SIZE), std::ios::cur);
+
+		const std::streampos freqPos =
+			n.position + KEY_SIZE + CHAR_SIZE;
 
 		uint32_t tmpFreq;
-		if (memoryWorker.read(reinterpret_cast<char*>(&tmpFreq), sizeof(tmpFreq))) {
-			if (tmpFreq == n.frequency) {
-				++tmpFreq;
-				if (memoryWorker.write(reinterpret_cast<char*>(&tmpFreq), sizeof(tmpFreq))) {
-					++n.frequency;
-				}
-			}
-		}
+
+		// Read
+		memoryWorker.seekg(freqPos, std::ios::beg);
+		if (!memoryWorker.read(reinterpret_cast<char*>(&tmpFreq), sizeof(tmpFreq)))
+			return n;
+
+		if (tmpFreq != n.frequency)
+			return n;
+
+		// Increment
+		++tmpFreq;
+
+		// Write back to the SAME location
+		memoryWorker.seekp(freqPos, std::ios::beg);
+		if (!memoryWorker.write(reinterpret_cast<const char*>(&tmpFreq), sizeof(tmpFreq)))
+			return n;
+
+		memoryWorker.flush();
+		n.frequency = tmpFreq;
 	}
 	return n;
 }
+
 
 void Brain::resetWorkerPos(std::fstream &worker) {
 	worker.clear(); // clear eofbit / failbit / badbit
@@ -205,7 +216,7 @@ void Brain::getMeow(std::string &userInput) {
 			// if we are at the end of the character stream, search for the next character
 			if (j >= characterStream.size()) {
 				nextChar = getNextHighestMeow(nextChar.key);
-				if (nextChar.ch == '\0') return;
+				if (nextChar.ch == '\0') break;
 				
 				// print the next meow
 				std::cout << nextChar.ch;
@@ -246,6 +257,26 @@ Neuron Brain::getNextHighestMeow(std::string parentKey) {
 	}
 
 	return res;
+}
+
+std::string Brain::getHighestNeruon() {
+	Neuron res{ EMPTY_KEY, '\0', 0, 0, EMPTY_KEY };
+	resetWorkerPos(neuronWorker);
+	bool eof = false;
+	while (!eof) {
+		Neuron tmp = readMemory();
+		eof = ((tmp.key.size() != KEY_SIZE) || (tmp.ch == '\0'));
+		if (!eof && tmp.frequency >= res.frequency) {
+			res = tmp;
+		}
+	}
+
+	std::string ret =
+		"Key: " + res.key +
+		"    char: " + std::string(1, res.ch) +
+		"    frequency: " + std::to_string(res.frequency);
+
+	return ret;
 }
 
 //NOTES:
