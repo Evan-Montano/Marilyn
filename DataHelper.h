@@ -4,6 +4,11 @@
 #include <random>
 #include <vector>
 
+#define NEURON_DEPTH 50
+#define KEY_SIZE 10
+#define CHAR_SIZE 1
+#define MEMORY_SIZE 15
+
 /// <summary>
 /// This is just a helper struct for processing text files
 /// to make sure we aren't processing the same characters
@@ -15,20 +20,30 @@ struct EyeCandy {
 };
 
 struct Neuron {
-	std::string key;
+	char key[KEY_SIZE];
 	char ch;
 	uint32_t frequency;
 	uint64_t position;
-	std::string parentKey;
+	char parentKey[KEY_SIZE];
 };
 
-const char EMPTY_KEY[9] =
-	{ '0','0','0','0','0','0','0','0','\0' };
-const int NEURON_DEPTH = 50;
-const size_t KEY_SIZE = 8;
-const size_t CHAR_SIZE = 1;
+struct MemoryNode {
+	char key[KEY_SIZE];
+	char ch;
+	uint32_t frequency;
+};
 
-std::string generate8ByteKey();
+struct NeuronNode {
+	char key[KEY_SIZE];
+	uint64_t position;
+	char parentKey[KEY_SIZE];
+};
+
+static char EMPTY_KEY[KEY_SIZE] =
+	{ '0','0','0','0','0','0','0','0', '0', '0' };
+
+char *generate10ByteKey();
+bool keyCompare(char* c1, char* c2);
 
 class Brain {
 public:
@@ -36,22 +51,26 @@ public:
 	bool initChat();
 	void processAttachedFile();
 	void beginChat();
-	std::string getHighestNeruon();
+	//std::string getHighestNeruon();
+	void loadBrain();
 private:
 	std::ifstream eyes;
 	std::fstream memoryWorker;
 	std::fstream neuronWorker;
+	std::vector<MemoryNode> memoryVec;
+	std::vector<NeuronNode> neuronVec;
 
-	Neuron getNeuronByTargetAndParentKey(
-		std::string parentKey,
+	/*Neuron getNeuronByTargetAndParentKey(
+		char *parentKey,
 		char targetChar,
 		bool increment,
-		bool createIfNotFound);
+		bool createIfNotFound);*/
 	
 	void resetWorkerPos(std::fstream& worker);
-	Neuron writeNewMemory(Neuron &n);
+	//Neuron writeNewMemory(Neuron &n);
 	Neuron readMemory();
-	Neuron incrementMemory(Neuron& n);
-	void getMeow(std::string &userInput);
-	Neuron getNextHighestMeow(std::string parentKey);
+	//Neuron incrementMemory(Neuron& n);
+	//void getMeow(std::string &userInput);
+	//Neuron getNextHighestMeow(std::string parentKey);
+	Neuron newNeuron();
 };

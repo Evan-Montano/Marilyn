@@ -36,6 +36,6 @@ void Brain::beginChat() {
 		if (userChat.size() == 0) continue;
 		if (userChat == "exit")break;
 
-		getMeow(userChat);
+		//getMeow(userChat);
 	}
 }
