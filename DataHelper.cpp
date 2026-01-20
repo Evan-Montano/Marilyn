@@ -1,18 +1,18 @@
 #include "Marilyn.h"
 #include "DataHelper.h"
 
-
 /// <summary>
 /// Generates a seriable key to be used as an identifier.
 /// </summary>
 /// <returns>8-Byte std::string</returns>
-char *generate10ByteKey() {
+std::array<char, KEY_SIZE> generate10ByteKey() {
 	const char availableChars[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#@$.()*&^%-_=+";
 	std::random_device dev;
 	std::mt19937 rng(dev());
 	std::uniform_int_distribution<std::size_t> dist(0, strlen(availableChars)-1);
 
-	char res[KEY_SIZE]{};
+	std::array<char, KEY_SIZE> res;
+
 	for (int i = 0; i < KEY_SIZE; ++i) {
 		res[i] = availableChars[dist(rng)];
 	}
@@ -131,47 +131,19 @@ void Brain::loadBrain() {
 	}
 }
 
-/// <summary>
-/// 
-/// </summary>
-/// <param name="parentKey"></param>
-/// <param name="targetChar"></param>
-/// <param name="increment"></param>
-/// <param name="createIfNotFound"></param>
-/// <returns>Neuron struct</returns>
-//Neuron Brain::getNeuronByTargetAndParentKey(
-//		char *parentKey, 
-//		char targetChar, 
-//		bool increment, 
-//		bool createIfNotFound) {
-//	Neuron res = newNeuron();
+void Brain::saveTrainingDataToDisk() {
+	resetWorkerPos(neuronWorker);
+	Neuron res;
 
-	//resetWorkerPos(neuronWorker);
-//	//[key] [position] [parentKey]
-//	//[key] [char]     [frequency]
-//	// Until EOF of neuronWorker, read through each node,
-//	// stopping when parentKey is found in the parentKey position. 
-//	// Use the memoryWorker to read the node at the indicated position.
-//	// Stop when found or EOF, perform actions if requested.
-//	bool notFound = false;
-//	while (!notFound) {
-//		res = readMemory();
-//		notFound = (res.key.size() != KEY_SIZE ||
-//			std::memcmp(res.key.data(), EMPTY_KEY, KEY_SIZE) == 0);
-//
-//		if (notFound || (res.ch == targetChar && res.parentKey == parentKey)) break;
-//	}
-//
-//	if (notFound && createIfNotFound) {
-//		Neuron newNeuron{ EMPTY_KEY, targetChar, 0, 0, parentKey };
-//		res = writeNewMemory(newNeuron);
-//	}
-//	else if (!notFound && increment) {
-//		res = incrementMemory(res);
-//	}
-//
-	/*return res;
-}*/
+	for (NeuronNode neuron: neuronVec) {
+		std::string key(neuron.key, KEY_SIZE);
+		std::string parentKey(neuron.parentKey, KEY_SIZE);
+		std::cout << key
+				  << neuron.position
+				  << parentKey
+				  << std::endl;
+	}
+}
 
 ///// <summary>
 ///// Increments the frequency of the current memory.

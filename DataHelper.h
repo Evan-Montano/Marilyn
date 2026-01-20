@@ -3,6 +3,8 @@
 #include <iterator>
 #include <random>
 #include <vector>
+#include <cstring>
+#include <array>
 
 #define NEURON_DEPTH 50
 #define KEY_SIZE 10
@@ -42,7 +44,7 @@ struct NeuronNode {
 static char EMPTY_KEY[KEY_SIZE] =
 	{ '0','0','0','0','0','0','0','0', '0', '0' };
 
-char *generate10ByteKey();
+std::array<char, KEY_SIZE> generate10ByteKey();
 bool keyCompare(char* c1, char* c2);
 
 class Brain {
@@ -59,17 +61,11 @@ private:
 	std::fstream neuronWorker;
 	std::vector<MemoryNode> memoryVec;
 	std::vector<NeuronNode> neuronVec;
-
-	/*Neuron getNeuronByTargetAndParentKey(
-		char *parentKey,
-		char targetChar,
-		bool increment,
-		bool createIfNotFound);*/
 	
 	void resetWorkerPos(std::fstream& worker);
+	void saveTrainingDataToDisk();
 	//Neuron writeNewMemory(Neuron &n);
 	Neuron readMemory();
-	//Neuron incrementMemory(Neuron& n);
 	//void getMeow(std::string &userInput);
 	//Neuron getNextHighestMeow(std::string parentKey);
 	Neuron newNeuron();

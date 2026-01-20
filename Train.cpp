@@ -60,6 +60,7 @@ void Brain::processAttachedFile() {
 	std::cout << "Loading brain for processing..";
 	noLumpsOrBumps.loadBrain();
 
+	// loop to parse training file
 	for (buf_iter i(eyes), e; i != e; ++i) {
 		char c = *i;
 		++bytesProcessed;
@@ -71,34 +72,43 @@ void Brain::processAttachedFile() {
 		}
 		window.push_back(EyeCandy{ c, false });
 
+		// outer loop for the root node
 		for (size_t n = 0; n < window.size(); n++) {
 			std::memcpy(parentKey, EMPTY_KEY, KEY_SIZE);
 			uint64_t neuronInx = 0;
 
+			// inner loop for the root & subsequent chars
 			for (size_t j = n; j < window.size(); j++) {
-				if (keyCompare(parentKey, EMPTY_KEY)) {
-					// check for a child node where the 
-					// character is window.at(j).ch AND 
-					// the parent key matches. Create one if it isn't found
-					bool found = false;
-					for (neuronInx; neuronInx < neuronVec.size(); ++neuronInx) {
-						// position / memory_size = index in the memory vector
-						uint64_t inx = neuronVec.at(neuronInx).position / MEMORY_SIZE;
+				// check for a child node where the 
+				// character is window.at(j).ch AND 
+				// the parent key matches. Create one if it isn't found
+				bool found = false;
+				for (neuronInx; neuronInx < neuronVec.size(); ++neuronInx) {
+					// position / memory_size = index in the memory vector
+					uint64_t inx = (neuronVec.at(neuronInx).position) / MEMORY_SIZE;
 
-						MemoryNode memNode = memoryVec.at(inx);
-						if (keyCompare(parentKey, memNode.key) && memNode.ch == window.at(j).ch) {
-							// match found
-							found = true;
+					MemoryNode memNode = memoryVec.at(inx);
+					if (keyCompare(parentKey, memNode.key) && memNode.ch == window.at(j).ch) {
+						// match found
+						// increment child nodes
+						// set the parent key as the curr node key
+						found = true;
+						if (keyCompare(parentKey, EMPTY_KEY) == false) {
+							++memNode.frequency;
 						}
-					}
-					if (found == false) {
-						// create a new node with the parent key and char
-						//char newKey[KEY_SIZE] = generate10ByteKey();
-						//neuronVec.push_back(NeuronNode{})
+						std::memcpy(parentKey, memNode.key, KEY_SIZE);
+						break;
 					}
 				}
-				else {
-
+				if (found == false) {
+					// create a new node with the parent key and char
+					std::array<char, KEY_SIZE> newKey = generate10ByteKey();
+					
+					NeuronNode newN {newKey, (neuronInx*MEMORY_SIZE), *parentKey};
+					MemoryNode newM {newKey, window.at(j).ch, 1};
+ 
+					neuronVec.push_back(newN);
+					memoryVec.push_back(newM);
 				}
 			}
 		}
@@ -114,32 +124,10 @@ void Brain::processAttachedFile() {
 			<< std::flush;
 
 	}
+	
+	// Now we need to write the training data back to disk
+	std::cout << std::endl << "Saving to disk.." << std::endl;
+	saveTrainingDataToDisk();
 
-	//for (buf_iter i(eyes), e; i != e; ++i) {
-	// 
-	//	for (size_t n = 0; n < window.size(); n++) {
-	//		std::string parentKey = EMPTY_KEY;
-	//		for (size_t j = n; j < window.size(); j++) {
-	//			// if the parent key is empty, we should first search
-	//			// for a root node with the same char, and assign the parentKey
-	//			// for subsequent searches.
-	//			// Create new if doesn't exist.
-	//			if (parentKey == EMPTY_KEY) {
-	//				Neuron result = getNeuronByTargetAndParentKey(EMPTY_KEY, window.at(j).ch, false, true);
-	//				parentKey = result.key;
-	//			}
-	//			// ensure the current parentKey is valid 8-bytes
-	//			else if (parentKey.size() == 8) {
-	//				// we are searching for a child node
-	//				// if a node hasn't been processed as a child, incrememnt it if found
-	//				Neuron result = getNeuronByTargetAndParentKey(parentKey, window.at(j).ch, !window.at(j).proc, true);
-	//				window.at(j).proc = true;
-	//				parentKey = result.key;
-	//			}
-	//			else {
-	//				window.clear();
-	//			}
-	//		}
-	//	}
-	//}
+	std::cout << "Completed.";
 }
