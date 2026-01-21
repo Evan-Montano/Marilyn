@@ -84,12 +84,13 @@ void Brain::processAttachedFile() {
 				// character is window.at(j).ch AND 
 				// the parent key matches. Create one if it isn't found
 				bool found = false;
-				for (neuronInx; neuronInx < neuronVec.size(); ++neuronInx) {
+				for (neuronInx; neuronInx < neuronVec.size(); neuronInx++) {
 					// position / memory_size = index in the memory vector
 					uint64_t inx = (neuronVec.at(neuronInx).position) / MEMORY_SIZE;
 
 					MemoryNode memNode = memoryVec.at(inx);
-					if (keyCompare(parentKey, memNode.key) && memNode.ch == window.at(j).ch) {
+					NeuronNode neurNode = neuronVec.at(inx);
+					if (keyCompare(parentKey, neurNode.parentKey) && memNode.ch == window.at(j).ch) {
 						// match found
 						// increment child nodes
 						// set the parent key as the curr node key

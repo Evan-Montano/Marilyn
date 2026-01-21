@@ -5,7 +5,7 @@
 
 int main()
 {
-	int mode = TRAIN;
+	int mode = CHAT;
 
 	mode == TRAIN ? initTrainModule() : initChatModule();
 

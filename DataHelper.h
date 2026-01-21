@@ -1,5 +1,6 @@
 #include "Marilyn.h"
 #include <fstream>
+#include <filesystem>
 #include <iterator>
 #include <random>
 #include <vector>
@@ -46,8 +47,8 @@ static std::array<char, KEY_SIZE> EMPTY_KEY =
 
 std::array<char, KEY_SIZE> generate10ByteKey();
 bool keyCompare(std::array<char, KEY_SIZE> c1, std::array<char, KEY_SIZE> c2);
-void keyCpy(std::array<char, KEY_SIZE> c1, std::array<char, KEY_SIZE> c2);
-void keyCpy(std::array<char, KEY_SIZE> c1, char c2[KEY_SIZE]);
+void keyCpy(std::array<char, KEY_SIZE>& c1, std::array<char, KEY_SIZE> c2);
+void keyCpy(std::array<char, KEY_SIZE>& c1, char c2[KEY_SIZE]);
 void keyCpy(char c1[KEY_SIZE], std::array<char, KEY_SIZE> c2);
 
 class Brain {
@@ -68,7 +69,7 @@ private:
 	void resetWorkerPos(std::fstream& worker);
 	void saveTrainingDataToDisk();
 	Neuron readMemory();
-	//void getMeow(std::string &userInput);
+	void getMeow(std::string &userInput);
 	//Neuron getNextHighestMeow(std::string parentKey);
 	Neuron newNeuron();
 };

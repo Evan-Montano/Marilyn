@@ -10,6 +10,7 @@ void initChatModule() {
 }
 
 bool Brain::initChat() {
+	std::cout << "Loading Marilyn\'s Brain..." << std::endl;
 	memoryWorker = std::fstream("../../../SmoothBrain/Marilyn.brain", std::ios::in | std::ios::out | std::ios::binary);
 	neuronWorker = std::fstream("../../../SmoothBrain/Marilyn.neurons", std::ios::in | std::ios::out | std::ios::binary);
 
@@ -22,6 +23,8 @@ bool Brain::initChat() {
 		std::cout << "Failed to access Marilyn\'s neuron index." << std::endl;
 		return false;
 	}
+
+	loadBrain();
 
 	return true;
 }
@@ -36,6 +39,6 @@ void Brain::beginChat() {
 		if (userChat.size() == 0) continue;
 		if (userChat == "exit")break;
 
-		//getMeow(userChat);
+		getMeow(userChat);
 	}
 }

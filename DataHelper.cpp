@@ -40,13 +40,13 @@ bool keyCompare(std::array<char, KEY_SIZE> c1, std::array<char, KEY_SIZE> c2) {
 /// </summary>
 /// <param name="c1"></param>
 /// <param name="c2"></param>
-void keyCpy(std::array<char, KEY_SIZE> c1, std::array<char, KEY_SIZE> c2) {
+void keyCpy(std::array<char, KEY_SIZE>& c1, std::array<char, KEY_SIZE> c2) {
 	for (int i = 0; i < KEY_SIZE; ++i) {
 		c1[i] = c2[i];
 	}
 }
 
-void keyCpy(std::array<char, KEY_SIZE> c1, char c2[KEY_SIZE]) {
+void keyCpy(std::array<char, KEY_SIZE>& c1, char c2[KEY_SIZE]) {
 	for (int i = 0; i < KEY_SIZE; ++i) {
 		c1[i] = c2[i];
 	}
@@ -128,7 +128,7 @@ void Brain::loadBrain() {
 	resetWorkerPos(neuronWorker);
 	MemoryNode memN{};
 	NeuronNode neurN{};
-	Neuron res;
+	Neuron res{};
 
 	while (true) {
 		res = readMemory();
@@ -159,6 +159,21 @@ void Brain::saveTrainingDataToDisk() {
 	Neuron res;
 	uint64_t totalSize = neuronVec.size();
 
+	// we first delete the old files, then write new ones
+	memoryWorker.close();
+	neuronWorker.close();
+	std::filesystem::remove("../../../SmoothBrain/Marilyn.brain");
+	std::filesystem::remove("../../../SmoothBrain/Marilyn.neurons");
+
+	{
+		std::ofstream("../../../SmoothBrain/Marilyn.brain", std::ios::binary | std::ios::app);
+		std::ofstream("../../../SmoothBrain/Marilyn.neurons", std::ios::binary | std::ios::app);
+	}
+
+	// reopen for read/write
+	memoryWorker.open("../../../SmoothBrain/Marilyn.brain", std::ios::in | std::ios::out | std::ios::binary);
+	neuronWorker.open("../../../SmoothBrain/Marilyn.neurons", std::ios::in | std::ios::out | std::ios::binary);
+
 	for (uint64_t inx = 0; inx < totalSize; inx++) {
 		res.key = neuronVec[inx].key;
 		res.parentKey = neuronVec[inx].parentKey;
@@ -166,11 +181,12 @@ void Brain::saveTrainingDataToDisk() {
 		res.frequency = memoryVec[inx].frequency;
 		res.ch = memoryVec[inx].ch;
 
-
+		writeNewMemory(res);
 
 		double percent =
 			(double(inx) / double(totalSize)) * 100.0;
-		std::cout << inx << " / "
+		std::cout << "\r"
+			<< inx << " / "
 			<< totalSize << " bytes ("
 			<< percent << "%)    "
 			<< std::flush;
@@ -208,90 +224,62 @@ void Brain::writeNewMemory(Neuron& n) {
 	memoryWorker.flush();
 }
 
-//void Brain::getMeow(std::string &userInput) {
-//	std::cout << ">>";
-//
-//	std::vector<char> characterStream;
-//	const size_t maxChars = NEURON_DEPTH - 1;
-//	const size_t start =
-//		userInput.size() > maxChars ? userInput.size() - maxChars : 0;
-//
-//	characterStream.insert(
-//		characterStream.begin(),
-//		userInput.begin() + start,
-//		userInput.end()
-//	);
-//
-//	//Neuron bestMeow{ EMPTY_KEY, '\0', 0, 0, EMPTY_KEY };
-//	for (size_t i = 0; i < characterStream.size()-1; ++i) {
-//		resetWorkerPos(neuronWorker);
-//		// getting root node
-//		Neuron nextChar = getNeuronByTargetAndParentKey(
-//			EMPTY_KEY, characterStream[i], false, false);
-//
-//		for (size_t j = i + 1; j <= characterStream.size(); ++j) {
-//			// if we are at the end of the character stream, search for the next character
-//			if (j >= characterStream.size()) {
-//				nextChar = getNextHighestMeow(nextChar.key);
-//				if (nextChar.ch == '\0') break;
-//				
-//				// print the next meow
-//				std::cout << nextChar.ch;
-//
-//				if (characterStream.size() >= NEURON_DEPTH) {
-//					characterStream.erase(characterStream.begin());
-//				}
-//				characterStream.push_back(nextChar.ch);
-//			}
-//			else {
-//				nextChar = getNeuronByTargetAndParentKey(
-//					nextChar.key, characterStream[j], false, false);
-//				if (nextChar.ch == '\0' && nextChar.key == EMPTY_KEY) break;
-//			}
-//		}
-//	}
-//}
-//
-//Neuron Brain::getNextHighestMeow(std::string parentKey) {
-//	Neuron res { EMPTY_KEY, '\0', 0, 0, parentKey };
-//	std::vector<Neuron> matches;
-//	resetWorkerPos(neuronWorker);
-//
-//	bool eof = false;
-//	while (!eof) {
-//		Neuron tmp = readMemory();
-//		eof = ((tmp.key.size() != KEY_SIZE) || (tmp.ch == '\0'));
-//		if (!eof && tmp.parentKey == parentKey) {
-//			matches.push_back(tmp);
-//		}
-//	}
-//
-//	// Get the highest frequency
-//	for (Neuron n : matches) {
-//		if (n.frequency > res.frequency) {
-//			res = n;
-//		}
-//	}
-//
-//	return res;
-//}
-//
-//std::string Brain::getHighestNeruon() {
-//	Neuron res{ EMPTY_KEY, '\0', 0, 0, EMPTY_KEY };
-//	resetWorkerPos(neuronWorker);
-//	bool eof = false;
-//	while (!eof) {
-//		Neuron tmp = readMemory();
-//		eof = ((tmp.key.size() != KEY_SIZE) || (tmp.ch == '\0'));
-//		if (!eof && tmp.frequency >= res.frequency) {
-//			res = tmp;
-//		}
-//	}
-//
-//	std::string ret =
-//		"Key: " + res.key +
-//		"    char: " + std::string(1, res.ch) +
-//		"    frequency: " + std::to_string(res.frequency);
-//
-//	return ret;
-//}
+void Brain::getMeow(std::string& userInput) {
+	std::cout << ">>";
+	std::vector<char> characterStream;
+	const size_t maxChars = NEURON_DEPTH - 1;
+	const size_t start = userInput.size() > maxChars ? userInput.size() - maxChars : 0;
+
+	characterStream.insert(
+		characterStream.begin(),
+		userInput.begin() + start,
+		userInput.end()
+	);
+
+	// parsing through the inputted character stream
+	for (size_t i = 0; i < characterStream.size() - 1; i++) {
+		// reset variables
+		uint64_t neuronPos = 0;
+		std::array<char, KEY_SIZE> parentKey = EMPTY_KEY;
+
+		// inner loop of input stream for finding largest chain
+		for (size_t j = i; j < characterStream.size(); j++) {
+			char targetC = characterStream[j];
+
+			// === Node Search === //
+			for (; neuronPos < neuronVec.size(); neuronPos++) {
+				if (neuronVec[neuronPos].parentKey == parentKey
+						&& memoryVec[neuronPos].ch == targetC) {
+					// Root found
+					parentKey = neuronVec[neuronPos].key;
+					break;
+				}
+			}// === End Node Search === //
+
+			// if we made it to the end of the chain,
+			// search for the next character.
+			if (j >= characterStream.size()-1) {
+				uint32_t bestFrequency = 0;
+				uint64_t bestCharInx = neuronPos;
+
+				for (; neuronPos < neuronVec.size(); neuronPos++) {
+					if (neuronVec[neuronPos].parentKey == parentKey
+						&& memoryVec[neuronPos].frequency > bestFrequency) {
+						bestFrequency = memoryVec[neuronPos].frequency;
+						bestCharInx = neuronPos;
+					}
+				}
+				if (bestFrequency == 0) break;
+
+				// At this point we can assume that we found the next character to print
+				std::cout << memoryVec[bestCharInx].ch;
+
+				if (characterStream.size() >= NEURON_DEPTH) {
+					characterStream.erase(characterStream.begin());
+				}
+				characterStream.push_back(memoryVec[bestCharInx].ch);
+			}
+
+		}
+	}
+}
