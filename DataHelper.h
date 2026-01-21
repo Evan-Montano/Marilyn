@@ -22,30 +22,33 @@ struct EyeCandy {
 };
 
 struct Neuron {
-	char key[KEY_SIZE];
+	std::array<char, KEY_SIZE> key{};
 	char ch;
 	uint32_t frequency;
 	uint64_t position;
-	char parentKey[KEY_SIZE];
+	std::array<char, KEY_SIZE> parentKey{};
 };
 
 struct MemoryNode {
-	char key[KEY_SIZE];
+	std::array<char, KEY_SIZE> key{};
 	char ch;
 	uint32_t frequency;
 };
 
 struct NeuronNode {
-	char key[KEY_SIZE];
+	std::array<char, KEY_SIZE> key{};
 	uint64_t position;
-	char parentKey[KEY_SIZE];
+	std::array<char, KEY_SIZE> parentKey{};
 };
 
-static char EMPTY_KEY[KEY_SIZE] =
+static std::array<char, KEY_SIZE> EMPTY_KEY = 
 	{ '0','0','0','0','0','0','0','0', '0', '0' };
 
 std::array<char, KEY_SIZE> generate10ByteKey();
-bool keyCompare(char* c1, char* c2);
+bool keyCompare(std::array<char, KEY_SIZE> c1, std::array<char, KEY_SIZE> c2);
+void keyCpy(std::array<char, KEY_SIZE> c1, std::array<char, KEY_SIZE> c2);
+void keyCpy(std::array<char, KEY_SIZE> c1, char c2[KEY_SIZE]);
+void keyCpy(char c1[KEY_SIZE], std::array<char, KEY_SIZE> c2);
 
 class Brain {
 public:
@@ -61,10 +64,9 @@ private:
 	std::fstream neuronWorker;
 	std::vector<MemoryNode> memoryVec;
 	std::vector<NeuronNode> neuronVec;
-	
+	void writeNewMemory(Neuron& n);
 	void resetWorkerPos(std::fstream& worker);
 	void saveTrainingDataToDisk();
-	//Neuron writeNewMemory(Neuron &n);
 	Neuron readMemory();
 	//void getMeow(std::string &userInput);
 	//Neuron getNextHighestMeow(std::string parentKey);

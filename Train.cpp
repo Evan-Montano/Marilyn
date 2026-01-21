@@ -55,7 +55,7 @@ void Brain::processAttachedFile() {
 	std::uint64_t bytesProcessed = 0;
 	typedef std::istreambuf_iterator<char> buf_iter;
 	std::vector<EyeCandy> window;
-	char parentKey[KEY_SIZE]{};
+	std::array<char, KEY_SIZE> parentKey{};
 
 	std::cout << "Loading brain for processing..";
 	noLumpsOrBumps.loadBrain();
@@ -74,7 +74,8 @@ void Brain::processAttachedFile() {
 
 		// outer loop for the root node
 		for (size_t n = 0; n < window.size(); n++) {
-			std::memcpy(parentKey, EMPTY_KEY, KEY_SIZE);
+			//std::memcpy(parentKey, EMPTY_KEY, KEY_SIZE);
+			parentKey = EMPTY_KEY;
 			uint64_t neuronInx = 0;
 
 			// inner loop for the root & subsequent chars
@@ -96,7 +97,7 @@ void Brain::processAttachedFile() {
 						if (keyCompare(parentKey, EMPTY_KEY) == false) {
 							++memNode.frequency;
 						}
-						std::memcpy(parentKey, memNode.key, KEY_SIZE);
+						parentKey = memNode.key;
 						break;
 					}
 				}
@@ -104,7 +105,7 @@ void Brain::processAttachedFile() {
 					// create a new node with the parent key and char
 					std::array<char, KEY_SIZE> newKey = generate10ByteKey();
 					
-					NeuronNode newN {newKey, (neuronInx*MEMORY_SIZE), *parentKey};
+					NeuronNode newN {newKey, (neuronInx*MEMORY_SIZE), parentKey};
 					MemoryNode newM {newKey, window.at(j).ch, 1};
  
 					neuronVec.push_back(newN);

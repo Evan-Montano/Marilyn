@@ -11,7 +11,7 @@ std::array<char, KEY_SIZE> generate10ByteKey() {
 	std::mt19937 rng(dev());
 	std::uniform_int_distribution<std::size_t> dist(0, strlen(availableChars)-1);
 
-	std::array<char, KEY_SIZE> res;
+	std::array<char, KEY_SIZE> res{};
 
 	for (int i = 0; i < KEY_SIZE; ++i) {
 		res[i] = availableChars[dist(rng)];
@@ -26,13 +26,36 @@ std::array<char, KEY_SIZE> generate10ByteKey() {
 /// <param name="c1"></param>
 /// <param name="c2"></param>
 /// <returns></returns>
-bool keyCompare(char* c1, char* c2) {
+bool keyCompare(std::array<char, KEY_SIZE> c1, std::array<char, KEY_SIZE> c2) {
 	for (int i = 0; i < KEY_SIZE; ++i) {
 		if (c1[i] != c2[i]) {
 			return false;
 		}
 	}
 	return true;
+}
+
+/// <summary>
+/// Helper method to copy array values over
+/// </summary>
+/// <param name="c1"></param>
+/// <param name="c2"></param>
+void keyCpy(std::array<char, KEY_SIZE> c1, std::array<char, KEY_SIZE> c2) {
+	for (int i = 0; i < KEY_SIZE; ++i) {
+		c1[i] = c2[i];
+	}
+}
+
+void keyCpy(std::array<char, KEY_SIZE> c1, char c2[KEY_SIZE]) {
+	for (int i = 0; i < KEY_SIZE; ++i) {
+		c1[i] = c2[i];
+	}
+}
+
+void keyCpy(char c1[KEY_SIZE], std::array<char, KEY_SIZE> c2) {
+	for (int i = 0; i < KEY_SIZE; ++i) {
+		c1[i] = c2[i];
+	}
 }
 
 /// <summary>
@@ -48,8 +71,8 @@ void Brain::resetWorkerPos(std::fstream& worker) {
 
 Neuron Brain::newNeuron() {
 	Neuron res{};
-	std::memcpy(res.key, EMPTY_KEY, KEY_SIZE);
-	std::memcpy(res.parentKey, EMPTY_KEY, KEY_SIZE);
+	res.key = EMPTY_KEY;
+	res.parentKey = EMPTY_KEY;
 	return res;
 }
 
@@ -92,11 +115,11 @@ Neuron Brain::readMemory() {
 		return res;
 	}
 	
-	std::memcpy(res.key, keyBuffer, KEY_SIZE);
+	keyCpy(res.key, keyBuffer);
 	res.ch = charBuffer;
 	res.frequency = freqBuffer;
 	res.position = posBuffer;
-	std::memcpy(res.parentKey, parentKeyBuf, KEY_SIZE);
+	keyCpy(res.parentKey, parentKeyBuf);
 
 	return res;
 }
@@ -111,18 +134,18 @@ void Brain::loadBrain() {
 		res = readMemory();
 		// Break if the key is empty
 		// Or if the character is the null terminator (default)
-		if (std::memcmp(res.key, EMPTY_KEY, KEY_SIZE) == 0
+		if (keyCompare(res.key, EMPTY_KEY) == true
 			|| res.ch == '\0') {
 			break;
 		}
 
 		// Copy into neuron node
-		std::memcpy(neurN.key, res.key, KEY_SIZE);
+		keyCpy(neurN.key, res.key);
 		neurN.position = res.position;
-		std::memcpy(neurN.parentKey, res.parentKey, KEY_SIZE);
+		keyCpy(neurN.parentKey, res.parentKey);
 
 		// Copy into brain node
-		std::memcpy(memN.key, res.key, KEY_SIZE);
+		keyCpy(memN.key, res.key);
 		memN.ch = res.ch;
 		memN.frequency = res.frequency;
 
@@ -134,53 +157,25 @@ void Brain::loadBrain() {
 void Brain::saveTrainingDataToDisk() {
 	resetWorkerPos(neuronWorker);
 	Neuron res;
+	uint64_t totalSize = neuronVec.size();
 
-	for (NeuronNode neuron: neuronVec) {
-		std::string key(neuron.key, KEY_SIZE);
-		std::string parentKey(neuron.parentKey, KEY_SIZE);
-		std::cout << key
-				  << neuron.position
-				  << parentKey
-				  << std::endl;
+	for (uint64_t inx = 0; inx < totalSize; inx++) {
+		res.key = neuronVec[inx].key;
+		res.parentKey = neuronVec[inx].parentKey;
+		res.position = neuronVec[inx].position;
+		res.frequency = memoryVec[inx].frequency;
+		res.ch = memoryVec[inx].ch;
+
+
+
+		double percent =
+			(double(inx) / double(totalSize)) * 100.0;
+		std::cout << inx << " / "
+			<< totalSize << " bytes ("
+			<< percent << "%)    "
+			<< std::flush;
 	}
 }
-
-///// <summary>
-///// Increments the frequency of the current memory.
-///// We should already have the exact position of the memory.
-///// </summary>
-///// <param name="n"></param>
-///// <returns></returns>
-//Neuron Brain::incrementMemory(Neuron& n) {
-//	if (std::memcmp(n.key.data(), EMPTY_KEY, KEY_SIZE) != 0) {
-//		memoryWorker.clear();
-//
-//		const std::streampos freqPos =
-//			n.position + KEY_SIZE + CHAR_SIZE;
-//
-//		uint32_t tmpFreq;
-//
-//		// Read
-//		memoryWorker.seekg(freqPos, std::ios::beg);
-//		if (!memoryWorker.read(reinterpret_cast<char*>(&tmpFreq), sizeof(tmpFreq)))
-//			return n;
-//
-//		if (tmpFreq != n.frequency)
-//			return n;
-//
-//		// Increment
-//		++tmpFreq;
-//
-//		// Write back to the SAME location
-//		memoryWorker.seekp(freqPos, std::ios::beg);
-//		if (!memoryWorker.write(reinterpret_cast<const char*>(&tmpFreq), sizeof(tmpFreq)))
-//			return n;
-//
-//		memoryWorker.flush();
-//		n.frequency = tmpFreq;
-//	}
-//	return n;
-//}
 
 /// <summary>
 /// Writing a new memory to the neural network and smooth brain.
@@ -188,37 +183,31 @@ void Brain::saveTrainingDataToDisk() {
 /// </summary>
 /// <param name="n"></param>
 /// <returns></returns>
-//Neuron Brain::writeNewMemory(Neuron& n) {
-//	neuronWorker.clear();
-//	memoryWorker.clear();
-//	neuronWorker.seekp(0, std::ios_base::end);
-//	memoryWorker.seekp(0, std::ios_base::end);
-//
-//	n.key = generate8ByteKey();
-//	n.position = static_cast<uint64_t>(memoryWorker.tellp());
-//	n.frequency = 1;
-//
-//	char keyBuffer[KEY_SIZE] = {};
-//	std::memcpy(keyBuffer, n.key.data(), std::min(n.key.size(), KEY_SIZE));
-//
-//	char parentKeyBuf[KEY_SIZE] = {};
-//	std::memcpy(parentKeyBuf, n.parentKey.data(), std::min(n.parentKey.size(), KEY_SIZE));
-//
-//	// neuron writing [key][position][parentKey]
-//	neuronWorker.write(keyBuffer, KEY_SIZE);
-//	neuronWorker.write(reinterpret_cast<const char*>(&n.position), sizeof(n.position));
-//	neuronWorker.write(parentKeyBuf, KEY_SIZE);
-//	neuronWorker.flush();
-//
-//	// memory writing [key][char][frequency]
-//	memoryWorker.write(keyBuffer, KEY_SIZE);
-//	memoryWorker.write(reinterpret_cast<const char*>(&n.ch), CHAR_SIZE);
-//	memoryWorker.write(reinterpret_cast<const char*>(&n.frequency), sizeof(n.frequency));
-//	memoryWorker.flush();
-//
-//	return n;
-//}
-//
+void Brain::writeNewMemory(Neuron& n) {
+	neuronWorker.clear();
+	memoryWorker.clear();
+	neuronWorker.seekp(0, std::ios_base::end);
+	memoryWorker.seekp(0, std::ios_base::end);
+
+	char keyBuffer[KEY_SIZE] = {};
+	keyCpy(keyBuffer, n.key);
+
+	char parentKeyBuffer[KEY_SIZE] = {};
+	keyCpy(parentKeyBuffer, n.parentKey);
+
+	// neuron writing [key][position][parentKey]
+	neuronWorker.write(keyBuffer, KEY_SIZE);
+	neuronWorker.write(reinterpret_cast<const char*>(&n.position), sizeof(n.position));
+	neuronWorker.write(parentKeyBuffer, KEY_SIZE);
+	neuronWorker.flush();
+
+	// memory writing [key][char][frequency]
+	memoryWorker.write(keyBuffer, KEY_SIZE);
+	memoryWorker.write(reinterpret_cast<const char*>(&n.ch), CHAR_SIZE);
+	memoryWorker.write(reinterpret_cast<const char*>(&n.frequency), sizeof(n.frequency));
+	memoryWorker.flush();
+}
+
 //void Brain::getMeow(std::string &userInput) {
 //	std::cout << ">>";
 //
@@ -306,20 +295,3 @@ void Brain::saveTrainingDataToDisk() {
 //
 //	return ret;
 //}
-
-//NOTES:
-// char buffer[8];
-// neuronWorker.read(reinterpret_cast<char*>(buffer), KEY_SIZE);
-
-// char t = 'a';
-// memoryWorker.write(reinterpret_cast<const char*>(t), CHAR_SIZE);
-// 
-//std::fstream has pointers for the in and out streams, which are not synced up automatically.
-//
-//Seeking:
-//seekg(n) (get)
-//seekp(n) (put)
-//
-//ios_base::beg	beginning of the stream
-//ios_base::cur	current position in the stream
-//ios_base::end	end of the stream
