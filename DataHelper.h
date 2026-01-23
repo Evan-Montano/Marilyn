@@ -6,11 +6,14 @@
 #include <vector>
 #include <cstring>
 #include <array>
+#include <deque>
 
 #define NEURON_DEPTH 20
 #define KEY_SIZE 10
 #define CHAR_SIZE 1
 #define MEMORY_SIZE 15
+
+
 
 /// <summary>
 /// This is just a helper struct for processing text files
@@ -42,7 +45,7 @@ struct NeuronNode {
 	std::array<char, KEY_SIZE> parentKey{};
 };
 
-static std::array<char, KEY_SIZE> EMPTY_KEY = 
+inline constexpr std::array<char, KEY_SIZE> EMPTY_KEY = 
 	{ '0','0','0','0','0','0','0','0', '0', '0' };
 
 std::array<char, KEY_SIZE> generate10ByteKey();

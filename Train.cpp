@@ -54,64 +54,69 @@ void Brain::processAttachedFile() {
 	const std::uint64_t totalBytes = static_cast<std::uint64_t>(getFileSize(eyes));
 	std::uint64_t bytesProcessed = 0;
 	typedef std::istreambuf_iterator<char> buf_iter;
-	std::vector<EyeCandy> window;
+	std::deque<EyeCandy> window;
 	std::array<char, KEY_SIZE> parentKey{};
+	const size_t preloadSize = NEURON_DEPTH-1;
 
-	std::cout << "Loading brain for processing..";
-	noLumpsOrBumps.loadBrain();
+	std::cout << "Loading brain for processing.." << std::flush;
+	loadBrain();
 
-	// loop to parse training file
-	for (buf_iter i(eyes), e; i != e; ++i) {
+	buf_iter i(eyes), e;
+	size_t count = 0;
+
+	// Load the first NEURON_SIZE characters
+	for (; i != e && window.size() < preloadSize; ++i) {
+		char c = *i;
+		if (c == '\n') continue;
+		window.push_back(EyeCandy{ c, false });
+	}
+
+	// loop to parse rest training file
+	for (; i != e; i++) {
 		char c = *i;
 		++bytesProcessed;
 
 		if (c == '\n') continue;
 
 		if (window.size() >= NEURON_DEPTH) {
-			window.erase(window.begin());
+			window.pop_front();
 		}
 		window.push_back(EyeCandy{ c, false });
 
-		// outer loop for the root node
+		uint64_t neuronInx = 0;
+		parentKey = EMPTY_KEY;
+		// Parse the window fully once, and build/increment the chain
+		// with the root of window[0]
 		for (size_t n = 0; n < window.size(); n++) {
-			//std::memcpy(parentKey, EMPTY_KEY, KEY_SIZE);
-			parentKey = EMPTY_KEY;
-			uint64_t neuronInx = 0;
+			bool found = false;
 
-			// inner loop for the root & subsequent chars
-			for (size_t j = n; j < window.size(); j++) {
-				// check for a child node where the 
-				// character is window.at(j).ch AND 
-				// the parent key matches. Create one if it isn't found
-				bool found = false;
-				for (neuronInx; neuronInx < neuronVec.size(); neuronInx++) {
-					// position / memory_size = index in the memory vector
-					uint64_t inx = (neuronVec.at(neuronInx).position) / MEMORY_SIZE;
+			// check for a child node where the 
+			// character is window.at(j).ch AND 
+			// the parent key matches. Create one if it isn't found
+			for (; neuronInx < neuronVec.size(); neuronInx++) {
+				MemoryNode& memNode = memoryVec[neuronInx];
+				NeuronNode& neurNode = neuronVec[neuronInx];
+				if (keyCompare(parentKey, neurNode.parentKey) && memNode.ch == window[n].ch) {
+					// match found
+					// increment child nodes
+					// set the parent key as the curr node key
+					found = true;
+					++memNode.frequency;
+					parentKey = memNode.key;
+					break;
+				}
+			}
+			if (found == false) {
+				// create a new node with the parent key and char
+				std::array<char, KEY_SIZE> newKey = generate10ByteKey();
+				
+				NeuronNode newN {newKey, (neuronInx*MEMORY_SIZE), parentKey};
+				MemoryNode newM {newKey, window.at(n).ch, 1};
 
-					MemoryNode memNode = memoryVec.at(inx);
-					NeuronNode neurNode = neuronVec.at(inx);
-					if (keyCompare(parentKey, neurNode.parentKey) && memNode.ch == window.at(j).ch) {
-						// match found
-						// increment child nodes
-						// set the parent key as the curr node key
-						found = true;
-						if (keyCompare(parentKey, EMPTY_KEY) == false) {
-							++memNode.frequency;
-						}
-						parentKey = memNode.key;
-						break;
-					}
-				}
-				if (found == false) {
-					// create a new node with the parent key and char
-					std::array<char, KEY_SIZE> newKey = generate10ByteKey();
-					
-					NeuronNode newN {newKey, (neuronInx*MEMORY_SIZE), parentKey};
-					MemoryNode newM {newKey, window.at(j).ch, 1};
- 
-					neuronVec.push_back(newN);
-					memoryVec.push_back(newM);
-				}
+				neuronVec.push_back(newN);
+				memoryVec.push_back(newM);
+
+				keyCpy(parentKey, newKey);
 			}
 		}
 
@@ -131,5 +136,5 @@ void Brain::processAttachedFile() {
 	std::cout << std::endl << "Saving to disk.." << std::endl;
 	saveTrainingDataToDisk();
 
-	std::cout << "Completed.";
+	std::cout << "Completed." << std::endl;
 }

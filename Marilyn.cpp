@@ -1,18 +1,33 @@
-﻿#include "Marilyn.h"
+﻿#include <iostream>
+#include "Marilyn.h"
 #include "DataHelper.h"
 #include "Train.h"
 #include "Chat.h"
 
 int main()
 {
-	int mode = TRAIN;
+    int mode = 0;
 
-	mode == TRAIN ? initTrainModule() : initChatModule();
+    std::cout << "Select mode:\n";
+    std::cout << "1) Chat\n";
+    std::cout << "2) Train\n";
+    std::cout << "> ";
+    std::cin >> mode;
 
-	/*Brain br;
-	br.initChat();
-	std::string n = br.getHighestNeruon();
-	std::cout << n;*/
-	return 0;
+    switch (mode)
+    {
+        case 1:
+            initChatModule();
+            break;
+
+        case 2:
+            initTrainModule();
+            break;
+
+        default:
+            std::cout << "Invalid selection.\n";
+            return 1;
+    }
+
+    return 0;
 }
-

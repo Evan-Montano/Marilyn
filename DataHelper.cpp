@@ -1,16 +1,16 @@
 #include "Marilyn.h"
 #include "DataHelper.h"
 
+const char availableChars[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#@$.()*&^%-_=+";
+std::random_device dev;
+std::mt19937 rng(dev());
+std::uniform_int_distribution<std::size_t> dist(0, strlen(availableChars)-1);
+
 /// <summary>
 /// Generates a seriable key to be used as an identifier.
 /// </summary>
 /// <returns>8-Byte std::string</returns>
 std::array<char, KEY_SIZE> generate10ByteKey() {
-	const char availableChars[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#@$.()*&^%-_=+";
-	std::random_device dev;
-	std::mt19937 rng(dev());
-	std::uniform_int_distribution<std::size_t> dist(0, strlen(availableChars)-1);
-
 	std::array<char, KEY_SIZE> res{};
 
 	for (int i = 0; i < KEY_SIZE; ++i) {
@@ -155,7 +155,6 @@ void Brain::loadBrain() {
 }
 
 void Brain::saveTrainingDataToDisk() {
-	resetWorkerPos(neuronWorker);
 	Neuron res;
 	uint64_t totalSize = neuronVec.size();
 
@@ -184,10 +183,10 @@ void Brain::saveTrainingDataToDisk() {
 		writeNewMemory(res);
 
 		double percent =
-			(double(inx) / double(totalSize)) * 100.0;
+			(double(inx+1) / double(totalSize)) * 100.0;
 		std::cout << "\r"
 			<< inx << " / "
-			<< totalSize << " bytes ("
+			<< totalSize << " Meows saved ("
 			<< percent << "%)    "
 			<< std::flush;
 	}

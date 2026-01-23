@@ -5,14 +5,14 @@ Brain chattyKitty;
 std::string userChat = "";
 
 void initChatModule() {
-	chattyKitty.initChat();
+	if (chattyKitty.initChat() == false) return;
 	chattyKitty.beginChat();
 }
 
 bool Brain::initChat() {
 	std::cout << "Loading Marilyn\'s Brain..." << std::endl;
-	memoryWorker = std::fstream("../../../SmoothBrain/Marilyn.brain", std::ios::in | std::ios::out | std::ios::binary);
-	neuronWorker = std::fstream("../../../SmoothBrain/Marilyn.neurons", std::ios::in | std::ios::out | std::ios::binary);
+	memoryWorker = std::fstream("../SmoothBrain/Marilyn.brain", std::ios::in | std::ios::out | std::ios::binary);
+	neuronWorker = std::fstream("../SmoothBrain/Marilyn.neurons", std::ios::in | std::ios::out | std::ios::binary);
 
 	if (!memoryWorker) {
 		std::cout << "Failed to access Marilyn\'s smooth brain." << std::endl;
@@ -40,5 +40,6 @@ void Brain::beginChat() {
 		if (userChat == "exit")break;
 
 		getMeow(userChat);
+		std::cout << std::endl;
 	}
 }
