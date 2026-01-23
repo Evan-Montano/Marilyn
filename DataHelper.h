@@ -7,7 +7,7 @@
 #include <cstring>
 #include <array>
 
-#define NEURON_DEPTH 50
+#define NEURON_DEPTH 20
 #define KEY_SIZE 10
 #define CHAR_SIZE 1
 #define MEMORY_SIZE 15

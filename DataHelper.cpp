@@ -162,17 +162,17 @@ void Brain::saveTrainingDataToDisk() {
 	// we first delete the old files, then write new ones
 	memoryWorker.close();
 	neuronWorker.close();
-	std::filesystem::remove("../../../SmoothBrain/Marilyn.brain");
-	std::filesystem::remove("../../../SmoothBrain/Marilyn.neurons");
+	std::filesystem::remove("../SmoothBrain/Marilyn.brain");
+	std::filesystem::remove("../SmoothBrain/Marilyn.neurons");
 
 	{
-		std::ofstream("../../../SmoothBrain/Marilyn.brain", std::ios::binary | std::ios::app);
-		std::ofstream("../../../SmoothBrain/Marilyn.neurons", std::ios::binary | std::ios::app);
+		std::ofstream("../SmoothBrain/Marilyn.brain", std::ios::binary | std::ios::app);
+		std::ofstream("../SmoothBrain/Marilyn.neurons", std::ios::binary | std::ios::app);
 	}
 
 	// reopen for read/write
-	memoryWorker.open("../../../SmoothBrain/Marilyn.brain", std::ios::in | std::ios::out | std::ios::binary);
-	neuronWorker.open("../../../SmoothBrain/Marilyn.neurons", std::ios::in | std::ios::out | std::ios::binary);
+	memoryWorker.open("../SmoothBrain/Marilyn.brain", std::ios::in | std::ios::out | std::ios::binary);
+	neuronWorker.open("../SmoothBrain/Marilyn.neurons", std::ios::in | std::ios::out | std::ios::binary);
 
 	for (uint64_t inx = 0; inx < totalSize; inx++) {
 		res.key = neuronVec[inx].key;

@@ -4,7 +4,7 @@
 
 Brain noLumpsOrBumps;
 void initTrainModule() {
-	noLumpsOrBumps.initTraining();
+	if (noLumpsOrBumps.initTraining() == false) return;
 
 	std::cout << "Beginning file processing. This *WILL take a long time.." << std::endl;
 	noLumpsOrBumps.processAttachedFile();
@@ -21,8 +21,8 @@ bool Brain::initTraining() {
 	std::getline(std::cin, path);
 
 	eyes = std::ifstream(path, std::ios::in);
-	memoryWorker = std::fstream("../../../SmoothBrain/Marilyn.brain", std::ios::in | std::ios::out | std::ios::binary);
-	neuronWorker = std::fstream("../../../SmoothBrain/Marilyn.neurons", std::ios::in | std::ios::out | std::ios::binary);
+	memoryWorker = std::fstream("../SmoothBrain/Marilyn.brain", std::ios::in | std::ios::out | std::ios::binary);
+	neuronWorker = std::fstream("../SmoothBrain/Marilyn.neurons", std::ios::in | std::ios::out | std::ios::binary);
 
 	if (!eyes) {
 		std::cout << "Failed to open file from path." << std::endl;
