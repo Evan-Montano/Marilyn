@@ -73,6 +73,7 @@ private:
 	void saveTrainingDataToDisk();
 	Neuron readMemory();
 	void getMeow(std::string &userInput);
-	//Neuron getNextHighestMeow(std::string parentKey);
+	int64_t findChild(std::array<char, KEY_SIZE>& parentKey, char target, int64_t startInx = 0);
+	int64_t findBestChild(std::array<char, KEY_SIZE>& parentKey, int64_t startInx = 0);
 	Neuron newNeuron();
 };

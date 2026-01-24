@@ -224,10 +224,12 @@ void Brain::writeNewMemory(Neuron& n) {
 }
 
 void Brain::getMeow(std::string& userInput) {
-	std::cout << ">>";
 	std::vector<char> characterStream;
 	const size_t maxChars = NEURON_DEPTH - 1;
 	const size_t start = userInput.size() > maxChars ? userInput.size() - maxChars : 0;
+	const size_t maxCharsToPrint = 200;
+	size_t printedChars = 0;
+
 
 	characterStream.insert(
 		characterStream.begin(),
@@ -235,50 +237,60 @@ void Brain::getMeow(std::string& userInput) {
 		userInput.end()
 	);
 
-	// parsing through the inputted character stream
-	for (size_t i = 0; i < characterStream.size() - 1; i++) {
-		// reset variables
-		uint64_t neuronPos = 0;
-		std::array<char, KEY_SIZE> parentKey = EMPTY_KEY;
+	// >Starting at the beginning of the chain, go down the line, child-by-child, until you get to the end of the line. 
+	// >If you cannot make it to the end of the line, begin at the next node and repeat.
+	// >When at the end of the line, find the next node (highest freq.)
+	// >Append the node to the end of the window
+	// >Attempt to find the next children in the chain
+	// >Repeat above if previous step failed
+	for (size_t start = 0; printedChars < maxCharsToPrint, start < characterStream.size(); start++) {
+		std::array<char, KEY_SIZE> targetParentKey = EMPTY_KEY;
+		int64_t lastIndex = 0;
+		bool found = false;
 
-		// inner loop of input stream for finding largest chain
-		for (size_t j = i; j < characterStream.size(); j++) {
-			char targetC = characterStream[j];
-
-			// === Node Search === //
-			for (; neuronPos < neuronVec.size(); neuronPos++) {
-				if (neuronVec[neuronPos].parentKey == parentKey
-						&& memoryVec[neuronPos].ch == targetC) {
-					// Root found
-					parentKey = neuronVec[neuronPos].key;
-					break;
-				}
-			}// === End Node Search === //
-
-			// if we made it to the end of the chain,
-			// search for the next character.
-			if (j >= characterStream.size()-1) {
-				uint32_t bestFrequency = 0;
-				uint64_t bestCharInx = neuronPos;
-
-				for (; neuronPos < neuronVec.size(); neuronPos++) {
-					if (neuronVec[neuronPos].parentKey == parentKey
-						&& memoryVec[neuronPos].frequency > bestFrequency) {
-						bestFrequency = memoryVec[neuronPos].frequency;
-						bestCharInx = neuronPos;
-					}
-				}
-				if (bestFrequency == 0) break;
-
-				// At this point we can assume that we found the next character to print
-				std::cout << memoryVec[bestCharInx].ch;
-
-				if (characterStream.size() >= NEURON_DEPTH) {
-					characterStream.erase(characterStream.begin());
-				}
-				characterStream.push_back(memoryVec[bestCharInx].ch);
+		for (size_t end = start; end < characterStream.size(); end++) {
+			char targetChar = characterStream[end];
+			if ((lastIndex = findChild(targetParentKey, targetChar, lastIndex)) > -1) {
+				found = true;				
 			}
+			else break;
+		}
 
+		while (found && printedChars < maxCharsToPrint) {
+			// search for and attempt to print best child node
+			if ((lastIndex = findBestChild(targetParentKey, lastIndex)) > -1) {
+				// we found it >:)
+				characterStream.push_back(memoryVec[lastIndex].ch);
+				std::cout << memoryVec[lastIndex].ch << std::flush;
+				printedChars++;
+			}
+			else {
+				found = false;
+			}
 		}
 	}
+}
+
+int64_t Brain::findBestChild(std::array<char, KEY_SIZE>& parentKey, int64_t startInx) {
+	uint32_t bestFrequency = 0;
+	int64_t bestIndex = -1;
+	for (; startInx < neuronVec.size(); startInx++) {
+		if (keyCompare(parentKey, neuronVec[startInx].parentKey) && memoryVec[startInx].frequency > bestFrequency) {
+			parentKey = neuronVec[startInx].key;
+			bestFrequency = memoryVec[startInx].frequency;
+			bestIndex = startInx;
+		}
+	}
+	return bestIndex;
+}
+
+// Helper method to return the index of a child node. Returns 0 if not found. If found, a new parentKey is assigned
+int64_t Brain::findChild(std::array<char, KEY_SIZE>& parentKey, char target, int64_t startInx) {
+	for (; startInx < neuronVec.size(); startInx++) {
+		if (keyCompare(parentKey, neuronVec[startInx].parentKey) && memoryVec[startInx].ch == target) {
+			parentKey = neuronVec[startInx].key;
+			return startInx;
+		}
+	}
+	return -1;
 }
