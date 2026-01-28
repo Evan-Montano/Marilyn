@@ -1,0 +1,44 @@
+1. Read the whole training data into a buffer first:
+    eyes.seekg(0, std::ios::end);
+    auto totalBytes = eyes.tellg();
+    eyes.seekg(0, std::ios::beg);
+    std::vector<char> buf;
+    buf.resize(static_cast<size_t>(totalBytes));
+    eyes.read(buf.data(), buf.size());
+
+    // iterate buf with indices/pointers; skip '\n' as before
+    for (size_t pos = 0; pos < buf.size(); ++pos) {
+        char c = buf[pos];
+        if (c == '\n') continue;
+        // push into circular window, process...
+    }
+
+2. Reserve capacity up front for loadBrain()
+
+3. utilize std::unordered_map<> 
+
+
+Node props:
+Key
+ParentKey
+Ch
+Freq
+
+// ========== //
+We will move to use two new unordered_map s:
+
+std::unordered_map<(parentKey, char), NewNode> nameTBD
+Key: 11 Bytes -- [ParentKey(10)][char(1)]
+Value: 14 --     [Key(10)][Frequency(4)]
+
+std::unordered_map<parentKey, vector<NewNode>> nameTBD
+Key: 10 Bytes --           [ParentKey(10)]
+Value: n*(1) + (1) Bytes -- ['a', 'b', '\0']
+
+// === brain === //
+25 Byte Blocks:
+[[ParentKey(10)][char(1)][Key(10)][Frequency(4)]]
+
+// === neurons === //
+10 + (N*1 + 1) Byte Blocks:
+[ParentKey(10)]['a', 'b', '\0']

@@ -20,177 +20,169 @@ std::array<char, KEY_SIZE> generate10ByteKey() {
 	return res;
 }
 
-/// <summary>
-/// Helper method to compare two 8 byte keys.
-/// </summary>
-/// <param name="c1"></param>
-/// <param name="c2"></param>
-/// <returns></returns>
-bool keyCompare(std::array<char, KEY_SIZE> c1, std::array<char, KEY_SIZE> c2) {
-	for (int i = 0; i < KEY_SIZE; ++i) {
-		if (c1[i] != c2[i]) {
-			return false;
-		}
+std::streampos Brain::getFileSize(std::fstream& file) {
+	auto current = file.tellg();
+	file.seekg(0, std::ios::end);
+	auto size = file.tellg();
+	file.seekg(current, std::ios::beg);
+	return size;
+}
+
+
+bool Brain::loadBrain() {
+	brainWorker = std::fstream("../SmoothBrain/Marilyn.brain", std::ios::in | std::ios::out | std::ios::binary);
+	if (!brainWorker) {
+		std::cout << "Failed to access Marilyn\'s smooth brain." << std::endl;
+		return false;
 	}
+
+	size_t fileSize = getFileSize(brainWorker);
+	if (fileSize > 0) {
+		brainMap.reserve(fileSize / 25);
+	}
+
+	brainWorker.clear();
+	brainWorker.seekg(0, std::ios_base::beg);
+
+	// === brain === //
+	// std::unordered_map<(parentKey+char), Node>
+	// 25 Byte Blocks:
+	// [[ParentKey(10)][char(1)][Key(10)][Frequency(4)]]
+	BrainCell cell{};
+	Node node{};
+	std::array<char, KEY_SIZE + 1> compositeKey{};
+	while (cell = readBrainCell(), !brainWorker.eof()) {
+		std::memcpy(compositeKey.data(), cell.key.data(), KEY_SIZE);
+		compositeKey[KEY_SIZE] = cell.idHash[KEY_SIZE]; // append char to end of parentKey to make composite key
+		node.key = cell.key;
+		node.frequency = cell.freq;
+		brainMap[compositeKey] = node;
+
+		// Print progress update
+		std::cout << "\r"
+			<< (double(brainWorker.tellg()) / double(fileSize)) * 100.0 << "%";
+	}
+
 	return true;
 }
 
-/// <summary>
-/// Helper method to copy array values over
-/// </summary>
-/// <param name="c1"></param>
-/// <param name="c2"></param>
-void keyCpy(std::array<char, KEY_SIZE>& c1, std::array<char, KEY_SIZE> c2) {
-	for (int i = 0; i < KEY_SIZE; ++i) {
-		c1[i] = c2[i];
+BrainCell Brain::readBrainCell() {
+	BrainCell res{};
+	brainWorker.clear();
+	char idHashBuffer[KEY_SIZE + 1] = {};
+	char keyBuffer[KEY_SIZE] = {};
+	uint32_t freqBuffer = 0;
+
+	// brain reading [parentKey][char][key][frequency]
+	if (!brainWorker.read(idHashBuffer, KEY_SIZE + 1)) {
+		return res;
 	}
-}
 
-void keyCpy(std::array<char, KEY_SIZE>& c1, char c2[KEY_SIZE]) {
-	for (int i = 0; i < KEY_SIZE; ++i) {
-		c1[i] = c2[i];
+	if (!brainWorker.read(keyBuffer, KEY_SIZE)) {
+		return res;
 	}
-}
 
-void keyCpy(char c1[KEY_SIZE], std::array<char, KEY_SIZE> c2) {
-	for (int i = 0; i < KEY_SIZE; ++i) {
-		c1[i] = c2[i];
+	if (!brainWorker.read(reinterpret_cast<char*>(&freqBuffer), sizeof(freqBuffer))) {
+		return res;
 	}
-}
 
-/// <summary>
-/// Resets the position of the passed
-/// worker.
-/// </summary>
-/// <param name="worker"></param>
-void Brain::resetWorkerPos(std::fstream& worker) {
-	worker.clear(); // clear eofbit / failbit / badbit
-	worker.seekg(0, std::ios_base::beg);
-	worker.seekp(0, std::ios_base::beg);
-}
-
-Neuron Brain::newNeuron() {
-	Neuron res{};
-	res.key = EMPTY_KEY;
-	res.parentKey = EMPTY_KEY;
+	std::memcpy(res.idHash.data(), idHashBuffer, KEY_SIZE + 1);
+	std::memcpy(res.key.data(), keyBuffer, KEY_SIZE);
+	res.freq = freqBuffer;
 	return res;
 }
 
-///// <summary>
-///// If Neuron.key is empty, there was an error or we have reached EOF.
-///// </summary>
-///// <returns></returns>
-Neuron Brain::readMemory() {
-	Neuron res = newNeuron();
+bool Brain::loadNeurons() {
+	neuronWorker = std::fstream("../SmoothBrain/Marilyn.neurons", std::ios::in | std::ios::out | std::ios::binary);
+	if (!neuronWorker) {
+		std::cout << "Failed to access Marilyn\'s neuron network." << std::endl;
+		return false;
+	}
+
+	size_t fileSize = getFileSize(neuronWorker);
+	if (fileSize > 0) {
+		neuronMap.reserve(fileSize / 15);
+	}
+
 	neuronWorker.clear();
-	memoryWorker.clear();
+	neuronWorker.seekg(0, std::ios_base::beg);
 
-	char keyBuffer[KEY_SIZE];
-	char confirmKeyBuffer[KEY_SIZE];
-	char parentKeyBuf[KEY_SIZE];
-	char charBuffer = '\0';
-	uint32_t freqBuffer;
-	uint64_t posBuffer;
+	// === neurons === //
+	// std::unordered_map<parentKey, vector<char>>
+	// 10 + (N*1 + 1) Byte Blocks:
+	// [ParentKey(10)]['a', 'b', '\0']
+	Neuron neuron{};
+	std::array<char, KEY_SIZE> parentKey{};
+	while (neuron = readNeuron(), !neuronWorker.eof()) {
+		parentKey = neuron.idHash;
+		neuronMap[parentKey] = neuron.children;
 
-	// neuron reading [key][position][parentKey]
-	if (!neuronWorker.read(keyBuffer, KEY_SIZE)) {
-		return res;
-	}
-	if (!neuronWorker.read(reinterpret_cast<char*>(&posBuffer), sizeof(posBuffer))) {
-		return res;
-	}
-	if (!neuronWorker.read(parentKeyBuf, KEY_SIZE)) {
-		return res;
+		// Print progress update
+		std::cout << "\r"
+			<< (double(neuronWorker.tellg()) / double(getFileSize(neuronWorker))) * 100.0 << "%";
 	}
 
-	// memory reading [key][char][frequency]
-	memoryWorker.seekg(posBuffer, std::ios::beg);
-	if (!memoryWorker.read(confirmKeyBuffer, KEY_SIZE) || std::memcmp(keyBuffer, confirmKeyBuffer, KEY_SIZE) != 0) {
-		return res;
-	}
-	if (!memoryWorker.read(&charBuffer, CHAR_SIZE)) {
-		return res;
-	}
-	if (!memoryWorker.read(reinterpret_cast<char*>(&freqBuffer), sizeof(freqBuffer))) {
-		return res;
-	}
+	return true;
+}
+
+Neuron Brain::readNeuron() {
+	Neuron res{};
+	neuronWorker.clear();
+	char idHashBuffer[KEY_SIZE] = {};
 	
-	keyCpy(res.key, keyBuffer);
-	res.ch = charBuffer;
-	res.frequency = freqBuffer;
-	res.position = posBuffer;
-	keyCpy(res.parentKey, parentKeyBuf);
+	// neuron reading [parentKey][char...'\0']
+	if (!neuronWorker.read(idHashBuffer, KEY_SIZE)) {
+		return res;
+	}
+
+	std::memcpy(res.idHash.data(), idHashBuffer, KEY_SIZE);
+
+	// read children until null terminator
+	char childChar = '\0';
+	while (neuronWorker.read(&childChar, CHAR_SIZE)) {
+		if (childChar == '\0') break;
+		res.children.push_back(childChar);
+	}
 
 	return res;
 }
 
-void Brain::loadBrain() {
-	resetWorkerPos(neuronWorker);
-	MemoryNode memN{};
-	NeuronNode neurN{};
-	Neuron res{};
+// void Brain::saveTrainingDataToDisk() {
+// 	Neuron res;
+// 	uint64_t totalSize = neuronVec.size();
 
-	while (true) {
-		res = readMemory();
-		// Break if the key is empty
-		// Or if the character is the null terminator (default)
-		if (keyCompare(res.key, EMPTY_KEY) == true
-			|| res.ch == '\0') {
-			break;
-		}
+// 	// we first delete the old files, then write new ones
+// 	memoryWorker.close();
+// 	neuronWorker.close();
+// 	std::filesystem::remove("../SmoothBrain/Marilyn.brain");
+// 	std::filesystem::remove("../SmoothBrain/Marilyn.neurons");
 
-		// Copy into neuron node
-		keyCpy(neurN.key, res.key);
-		neurN.position = res.position;
-		keyCpy(neurN.parentKey, res.parentKey);
+// 	{
+// 		std::ofstream("../SmoothBrain/Marilyn.brain", std::ios::binary | std::ios::app);
+// 		std::ofstream("../SmoothBrain/Marilyn.neurons", std::ios::binary | std::ios::app);
+// 	}
 
-		// Copy into brain node
-		keyCpy(memN.key, res.key);
-		memN.ch = res.ch;
-		memN.frequency = res.frequency;
+// 	// reopen for read/write
+// 	memoryWorker.open("../SmoothBrain/Marilyn.brain", std::ios::in | std::ios::out | std::ios::binary);
+// 	neuronWorker.open("../SmoothBrain/Marilyn.neurons", std::ios::in | std::ios::out | std::ios::binary);
 
-		neuronVec.push_back(neurN);
-		memoryVec.push_back(memN);
-	}
-}
+// 	for (uint64_t inx = 0; inx < totalSize; inx++) {
+// 		res.key = neuronVec[inx].key;
+// 		res.parentKey = neuronVec[inx].parentKey;
+// 		res.frequency = memoryVec[inx].frequency;
+// 		res.ch = memoryVec[inx].ch;
 
-void Brain::saveTrainingDataToDisk() {
-	Neuron res;
-	uint64_t totalSize = neuronVec.size();
+// 		writeNewMemory(res);
 
-	// we first delete the old files, then write new ones
-	memoryWorker.close();
-	neuronWorker.close();
-	std::filesystem::remove("../SmoothBrain/Marilyn.brain");
-	std::filesystem::remove("../SmoothBrain/Marilyn.neurons");
-
-	{
-		std::ofstream("../SmoothBrain/Marilyn.brain", std::ios::binary | std::ios::app);
-		std::ofstream("../SmoothBrain/Marilyn.neurons", std::ios::binary | std::ios::app);
-	}
-
-	// reopen for read/write
-	memoryWorker.open("../SmoothBrain/Marilyn.brain", std::ios::in | std::ios::out | std::ios::binary);
-	neuronWorker.open("../SmoothBrain/Marilyn.neurons", std::ios::in | std::ios::out | std::ios::binary);
-
-	for (uint64_t inx = 0; inx < totalSize; inx++) {
-		res.key = neuronVec[inx].key;
-		res.parentKey = neuronVec[inx].parentKey;
-		res.position = neuronVec[inx].position;
-		res.frequency = memoryVec[inx].frequency;
-		res.ch = memoryVec[inx].ch;
-
-		writeNewMemory(res);
-
-		double percent =
-			(double(inx+1) / double(totalSize)) * 100.0;
-		std::cout << "\r"
-			<< inx << " / "
-			<< totalSize << " Meows saved ("
-			<< percent << "%)    "
-			<< std::flush;
-	}
-}
+// 		double percent =
+// 			(double(inx+1) / double(totalSize)) * 100.0;
+// 		std::cout << "\r"
+// 			<< inx << " / "
+// 			<< totalSize << " Meows saved ("
+// 			<< percent << "%)    "
+// 			<< std::flush;
+// 	}
+// }
 
 /// <summary>
 /// Writing a new memory to the neural network and smooth brain.
@@ -198,99 +190,98 @@ void Brain::saveTrainingDataToDisk() {
 /// </summary>
 /// <param name="n"></param>
 /// <returns></returns>
-void Brain::writeNewMemory(Neuron& n) {
-	neuronWorker.clear();
-	memoryWorker.clear();
-	neuronWorker.seekp(0, std::ios_base::end);
-	memoryWorker.seekp(0, std::ios_base::end);
+// void Brain::writeNewMemory(Neuron& n) {
+// 	neuronWorker.clear();
+// 	memoryWorker.clear();
+// 	neuronWorker.seekp(0, std::ios_base::end);
+// 	memoryWorker.seekp(0, std::ios_base::end);
 
-	char keyBuffer[KEY_SIZE] = {};
-	keyCpy(keyBuffer, n.key);
+// 	char keyBuffer[KEY_SIZE] = {};
+// 	keyCpy(keyBuffer, n.key);
 
-	char parentKeyBuffer[KEY_SIZE] = {};
-	keyCpy(parentKeyBuffer, n.parentKey);
+// 	char parentKeyBuffer[KEY_SIZE] = {};
+// 	keyCpy(parentKeyBuffer, n.parentKey);
 
-	// neuron writing [key][position][parentKey]
-	neuronWorker.write(keyBuffer, KEY_SIZE);
-	neuronWorker.write(reinterpret_cast<const char*>(&n.position), sizeof(n.position));
-	neuronWorker.write(parentKeyBuffer, KEY_SIZE);
-	neuronWorker.flush();
+// 	// neuron writing [key][parentKey]
+// 	neuronWorker.write(keyBuffer, KEY_SIZE);
+// 	neuronWorker.write(parentKeyBuffer, KEY_SIZE);
+// 	neuronWorker.flush();
 
-	// memory writing [key][char][frequency]
-	memoryWorker.write(keyBuffer, KEY_SIZE);
-	memoryWorker.write(reinterpret_cast<const char*>(&n.ch), CHAR_SIZE);
-	memoryWorker.write(reinterpret_cast<const char*>(&n.frequency), sizeof(n.frequency));
-	memoryWorker.flush();
-}
+// 	// memory writing [key][char][frequency]
+// 	memoryWorker.write(keyBuffer, KEY_SIZE);
+// 	memoryWorker.write(reinterpret_cast<const char*>(&n.ch), CHAR_SIZE);
+// 	memoryWorker.write(reinterpret_cast<const char*>(&n.frequency), sizeof(n.frequency));
+// 	memoryWorker.flush();
+// }
 
-void Brain::getMeow(std::string& userInput) {
-	std::vector<char> characterStream;
-	const size_t maxChars = NEURON_DEPTH - 1;
-	const size_t start = userInput.size() > maxChars ? userInput.size() - maxChars : 0;
-	const size_t maxCharsToPrint = 200;
-	size_t printedChars = 0;
+// void Brain::getMeow(std::string& userInput) {
+// 	std::vector<char> characterStream;
+// 	const size_t maxChars = NEURON_DEPTH - 1;
+// 	const size_t start = userInput.size() > maxChars ? userInput.size() - maxChars : 0;
+// 	const size_t maxCharsToPrint = 200;
+// 	size_t printedChars = 0;
 
 
-	characterStream.insert(
-		characterStream.begin(),
-		userInput.begin() + start,
-		userInput.end()
-	);
+// 	characterStream.insert(
+// 		characterStream.begin(),
+// 		userInput.begin() + start,
+// 		userInput.end()
+// 	);
 
-	// >Starting at the beginning of the chain, go down the line, child-by-child, until you get to the end of the line. 
-	// >If you cannot make it to the end of the line, begin at the next node and repeat.
-	// >When at the end of the line, find the next node (highest freq.)
-	// >Append the node to the end of the window
-	// >Attempt to find the next children in the chain
-	// >Repeat above if previous step failed
-	for (size_t start = 0; printedChars < maxCharsToPrint, start < characterStream.size(); start++) {
-		std::array<char, KEY_SIZE> targetParentKey = EMPTY_KEY;
-		int64_t lastIndex = 0;
-		bool found = false;
+// 	// >Starting at the beginning of the chain, go down the line, child-by-child, until you get to the end of the line. 
+// 	// >If you cannot make it to the end of the line, begin at the next node and repeat.
+// 	// >When at the end of the line, find the next node (highest freq.)
+// 	// >Append the node to the end of the window
+// 	// >Attempt to find the next children in the chain
+// 	// >Repeat above if previous step failed
+// 	for (size_t start = 0; printedChars < maxCharsToPrint && start < characterStream.size(); start++) {
+// 		std::array<char, KEY_SIZE> targetParentKey = EMPTY_KEY;
+// 		int64_t lastIndex = 0;
+// 		bool found = false;
 
-		for (size_t end = start; end < characterStream.size(); end++) {
-			char targetChar = characterStream[end];
-			if ((lastIndex = findChild(targetParentKey, targetChar, lastIndex)) > -1) {
-				found = true;				
-			}
-			else break;
-		}
+// 		for (size_t end = start; end < characterStream.size(); end++) {
+// 			char targetChar = characterStream[end];
+// 			if ((lastIndex = findChild(targetParentKey, targetChar, lastIndex)) > -1) {
+// 				found = true;				
+// 			}
+// 			else break;
+// 		}
 
-		while (found && printedChars < maxCharsToPrint) {
-			// search for and attempt to print best child node
-			if ((lastIndex = findBestChild(targetParentKey, lastIndex)) > -1) {
-				// we found it >:)
-				characterStream.push_back(memoryVec[lastIndex].ch);
-				std::cout << memoryVec[lastIndex].ch << std::flush;
-				printedChars++;
-			}
-			else {
-				found = false;
-			}
-		}
-	}
-}
+// 		while (found && printedChars < maxCharsToPrint) {
+// 			// search for and attempt to print best child node
+// 			if ((lastIndex = findBestChild(targetParentKey, lastIndex)) > -1) {
+// 				// we found it >:)
+// 				characterStream.push_back(memoryVec[lastIndex].ch);
+// 				std::cout << memoryVec[lastIndex].ch << std::flush;
+// 				printedChars++;
+// 			}
+// 			else {
+// 				found = false;
+// 			}
+// 		}
+// 	}
+// }
 
-int64_t Brain::findBestChild(std::array<char, KEY_SIZE>& parentKey, int64_t startInx) {
-	uint32_t bestFrequency = 0;
-	int64_t bestIndex = -1;
-	for (; startInx < neuronVec.size(); startInx++) {
-		if (keyCompare(parentKey, neuronVec[startInx].parentKey) && memoryVec[startInx].frequency > bestFrequency) {
-			parentKey = neuronVec[startInx].key;
-			bestFrequency = memoryVec[startInx].frequency;
-			bestIndex = startInx;
-		}
-	}
-	return bestIndex;
-}
+// int64_t Brain::findBestChild(std::array<char, KEY_SIZE>& parentKey, int64_t startInx) {
+// 	uint32_t bestFrequency = 0;
+// 	int64_t bestIndex = -1;
+// 	for (; startInx < neuronVec.size(); startInx++) {
+// 		if (keyCompare(parentKey, neuronVec[startInx].parentKey) && memoryVec[startInx].frequency > bestFrequency) {
+// 			parentKey = neuronVec[startInx].key;
+// 			bestFrequency = memoryVec[startInx].frequency;
+// 			bestIndex = startInx;
+// 		}
+// 	}
+// 	return bestIndex;
+// }
 
 // Helper method to return the index of a child node. Returns 0 if not found. If found, a new parentKey is assigned
-int64_t Brain::findChild(std::array<char, KEY_SIZE>& parentKey, char target, int64_t startInx) {
-	for (; startInx < neuronVec.size(); startInx++) {
-		if (keyCompare(parentKey, neuronVec[startInx].parentKey) && memoryVec[startInx].ch == target) {
-			parentKey = neuronVec[startInx].key;
-			return startInx;
-		}
-	}
-	return -1;
-}
+// int64_t Brain::findChild(std::array<char, KEY_SIZE>& parentKey, char target, int64_t startInx) {
+// 	for (; startInx < neuronVec.size(); startInx++) {
+// 		if (keyCompare(parentKey, neuronVec[startInx].parentKey) && memoryVec[startInx].ch == target) {
+// 			parentKey = neuronVec[startInx].key;
+// 			return startInx;
+// 		}
+// 	}
+// 	return -1;
+// }
