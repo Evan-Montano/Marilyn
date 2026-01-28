@@ -12,7 +12,7 @@ void initTrainModule() {
 		std::cin.ignore();
 	}
 	std::getline(std::cin, path);
-	brain.inFile = std::ifstream(path, std::ios::in);
+	brain.inFile = std::fstream(path, std::ios::in);
 		if (!brain.inFile) {
 		std::cout << "Failed to open file from path." << std::endl;
 		return;
@@ -21,45 +21,62 @@ void initTrainModule() {
 	if (!brain.loadBrain() || !brain.loadNeurons()) return;
 
 	std::cout << "Beginning file processing. This *WILL take a long time.." << std::endl;
+	brain.processAttachedFile();
 }
 
-// void Brain::processAttachedFile() {
-// 	const std::uint64_t totalBytes = static_cast<std::uint64_t>(getFileSize(eyes));
-// 	std::uint64_t bytesProcessed = 0;
-// 	typedef std::istreambuf_iterator<char> buf_iter;
-// 	std::deque<EyeCandy> window;
-// 	std::array<char, KEY_SIZE> parentKey{};
-// 	const size_t preloadSize = NEURON_DEPTH-1;
+void Brain::processAttachedFile() {
+	const uint64_t totalBytes = static_cast<uint64_t>(getFileSize(inFile));
+	typedef std::istreambuf_iterator<char> buf_iter;
+	std::deque<char> window;
+	const size_t preloadSize = NEURON_DEPTH;
+	std::array<char, KEY_SIZE+1> parentKeyHash{};
 
-// 	std::cout << "Loading brain for processing.." << std::flush;
-// 	loadBrain();
+	buf_iter i(inFile), e;
+	size_t count = 0;
 
-// 	buf_iter i(eyes), e;
-// 	size_t count = 0;
+	// Load the first NEURON_SIZE characters
+	for (; i != e && window.size() < preloadSize; i++) {
+		char c = *i;
+		if (c == 'n') continue;
+		window.push_back(c);
+	}
 
-// 	// Load the first NEURON_SIZE characters
-// 	for (; i != e && window.size() < preloadSize; ++i) {
-// 		char c = *i;
-// 		if (c == '\n') continue;
-// 		window.push_back(EyeCandy{ c, false });
-// 	}
+	// loop to parse rest of training file
+	for (; i != e; i++) {
+		char c = *i;
+		if (c == '\n') continue;
+		if (window.size() > NEURON_DEPTH) window.pop_front();
+		window.push_back(c);
+
+		// Parse the window fully once, and build/increment the chain
+		// with the root of window[0]
+		std::memcpy(parentKeyHash.data(), EMPTY_KEY.data(), KEY_SIZE);
+		for (size_t n = 0; n < window.size(); n++) {
+			parentKeyHash[KEY_SIZE] = c;
+			// brainMap[parentKeyHash];
+			if (std::memcmp(brainMap[parentKeyHash].key.data(), EMPTY_KEY.data(), KEY_SIZE) == 0 
+					|| brainMap[parentKeyHash].frequency == 0) {
+				// This is a new node
+				brainMap[parentKeyHash].key = generate10ByteKey();
+				brainMap[parentKeyHash].frequency = 1;
+			}
+			else {
+				brainMap[parentKeyHash].frequency++;
+			}
+
+
+
+
+		}
+	}
+}
 
 // 	// loop to parse rest training file
-// 	for (; i != e; i++) {
-// 		char c = *i;
-// 		++bytesProcessed;
-
-// 		if (c == '\n') continue;
-
-// 		if (window.size() >= NEURON_DEPTH) {
-// 			window.pop_front();
-// 		}
-// 		window.push_back(EyeCandy{ c, false });
 
 // 		uint64_t neuronInx = 0;
 // 		parentKey = EMPTY_KEY;
 // 		// Parse the window fully once, and build/increment the chain
-// 		// with the root of window[0]
+// 		
 // 		for (size_t n = 0; n < window.size(); n++) {
 // 			bool found = false;
 

@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Marilyn.h"
 #include <fstream>
 #include <filesystem>
@@ -11,6 +13,7 @@
 
 constexpr size_t KEY_SIZE = 10;
 constexpr size_t CHAR_SIZE = 1;
+constexpr size_t NEURON_DEPTH = 20;
 inline constexpr std::array<char, KEY_SIZE> EMPTY_KEY = 
 	{ '0','0','0','0','0','0','0','0', '0', '0' };
 
@@ -32,23 +35,35 @@ struct Node {
 
 std::array<char, KEY_SIZE> generate10ByteKey();
 
+// Custom hash function for std::array<char, N>
+struct ArrayHasher {
+	template <size_t N>
+	std::size_t operator()(const std::array<char, N>& arr) const {
+		std::size_t h = 0;
+		for (auto e : arr) {
+			// Combine the hash of the current character with the existing hash
+			// This is a standard hash combination algorithm (from Boost)
+			h ^= std::hash<char>{}(e) + 0x9e3779b9 + (h << 6) + (h >> 2);
+		}
+		return h;
+	}
+};
+
 class Brain {
 public:
+	std::fstream inFile;
 	// bool initTraining();
 	// bool initChat();
-	// void processAttachedFile();
 	// void beginChat();
 	//std::string getHighestNeruon();
-	// void loadBrain();
-	// bool init();
+	void processAttachedFile();
 	bool loadBrain();
 	bool loadNeurons();
-	std::ifstream inFile;
 private:
 	std::fstream brainWorker;
 	std::fstream neuronWorker;
-	std::unordered_map<std::array<char, KEY_SIZE+1>, Node> brainMap;
-	std::unordered_map<std::array<char, KEY_SIZE>, std::vector<char>> neuronMap;
+	std::unordered_map<std::array<char, KEY_SIZE+1>, Node, ArrayHasher> brainMap;
+	std::unordered_map<std::array<char, KEY_SIZE>, std::vector<char>, ArrayHasher> neuronMap;
 	BrainCell readBrainCell();
 	Neuron readNeuron();
 	std::streampos getFileSize(std::fstream& file);

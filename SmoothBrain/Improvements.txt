@@ -27,11 +27,11 @@ Freq
 // ========== //
 We will move to use two new unordered_map s:
 
-std::unordered_map<(parentKey, char), NewNode> nameTBD
+std::unordered_map<(parentKey, char), Node> nameTBD
 Key: 11 Bytes -- [ParentKey(10)][char(1)]
 Value: 14 --     [Key(10)][Frequency(4)]
 
-std::unordered_map<parentKey, vector<NewNode>> nameTBD
+std::unordered_map<parentKey, vector<char>> nameTBD
 Key: 10 Bytes --           [ParentKey(10)]
 Value: n*(1) + (1) Bytes -- ['a', 'b', '\0']
 

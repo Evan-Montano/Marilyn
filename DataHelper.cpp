@@ -52,8 +52,7 @@ bool Brain::loadBrain() {
 	Node node{};
 	std::array<char, KEY_SIZE + 1> compositeKey{};
 	while (cell = readBrainCell(), !brainWorker.eof()) {
-		std::memcpy(compositeKey.data(), cell.key.data(), KEY_SIZE);
-		compositeKey[KEY_SIZE] = cell.idHash[KEY_SIZE]; // append char to end of parentKey to make composite key
+		std::memcpy(compositeKey.data(), cell.idHash.data(), KEY_SIZE);
 		node.key = cell.key;
 		node.frequency = cell.freq;
 		brainMap[compositeKey] = node;
