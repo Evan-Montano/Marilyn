@@ -1,6 +1,4 @@
 ﻿#include <iostream>
-#include "Marilyn.h"
-#include "DataHelper.h"
 #include "Train.h"
 #include "Chat.h"
 

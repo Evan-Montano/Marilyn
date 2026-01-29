@@ -1,5 +1,5 @@
-#include "Marilyn.h"
 #include "DataHelper.h"
+#include <cstddef>
 
 const char availableChars[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#@$.()*&^%-_=+";
 std::random_device dev;
@@ -13,7 +13,7 @@ std::uniform_int_distribution<std::size_t> dist(0, strlen(availableChars)-1);
 std::array<char, KEY_SIZE> generate10ByteKey() {
 	std::array<char, KEY_SIZE> res{};
 
-	for (int i = 0; i < KEY_SIZE; ++i) {
+	for (size_t i = 0; i < KEY_SIZE; ++i) {
 		res[i] = availableChars[dist(rng)];
 	}
 
@@ -70,7 +70,7 @@ BrainCell Brain::readBrainCell() {
 	brainWorker.clear();
 	char idHashBuffer[KEY_SIZE + 1] = {};
 	char keyBuffer[KEY_SIZE] = {};
-	uint32_t freqBuffer = 0;
+	uint8_t freqBuffer = 0;
 
 	// brain reading [parentKey][char][key][frequency]
 	if (!brainWorker.read(idHashBuffer, KEY_SIZE + 1)) {
@@ -118,7 +118,7 @@ bool Brain::loadNeurons() {
 
 		// Print progress update
 		std::cout << "\r"
-			<< (double(neuronWorker.tellg()) / double(getFileSize(neuronWorker))) * 100.0 << "%";
+			<< (double(neuronWorker.tellg()) / double(fileSize)) * 100.0 << "%";
 	}
 
 	return true;
@@ -146,32 +146,79 @@ Neuron Brain::readNeuron() {
 	return res;
 }
 
-// void Brain::saveTrainingDataToDisk() {
-// 	Neuron res;
-// 	uint64_t totalSize = neuronVec.size();
+void Brain::saveDataToDisk() {
+	// Delete old files and write fresh ones.
+	brainWorker.close();
+	neuronWorker.close();
+	std::filesystem::remove("../SmoothBrain/Marilyn.brain");
+	std::filesystem::remove("../SmoothBrain/Marilyn.neurons");
+	{
+		std::ofstream("../SmoothBrain/Marilyn.brain", std::ios::binary | std::ios::app);
+		std::ofstream("../SmoothBrain/Marilyn.neurons", std::ios::binary | std::ios::app);
+	}
+	brainWorker.open("../SmoothBrain/Marilyn.brain", std::ios::in | std::ios::out | std::ios::binary);
+ 	neuronWorker.open("../SmoothBrain/Marilyn.neurons", std::ios::in | std::ios::out | std::ios::binary);
 
-// 	// we first delete the old files, then write new ones
-// 	memoryWorker.close();
-// 	neuronWorker.close();
-// 	std::filesystem::remove("../SmoothBrain/Marilyn.brain");
-// 	std::filesystem::remove("../SmoothBrain/Marilyn.neurons");
+	uint64_t inx = 0;
+	uint64_t totalSize = neuronMap.size();
+	for (std::pair<const std::array<char, 11>, Node> & rec : brainMap) {
+		if (writeToBrain(rec) == false) {
+			std::cout << "An error occured while writing to brain.." << std::endl;
+			return;
+		}
+		std::cout << "\r"
+			<< "Writing brain: "
+			<< (double(++inx) / double(totalSize)) * 100 << "%";
+	}
+	brainWorker.flush();
 
-// 	{
-// 		std::ofstream("../SmoothBrain/Marilyn.brain", std::ios::binary | std::ios::app);
-// 		std::ofstream("../SmoothBrain/Marilyn.neurons", std::ios::binary | std::ios::app);
-// 	}
+	inx = 0;
+	totalSize = neuronMap.size();
+	for (std::pair<const std::array<char, 10>, std::vector<char>> & rec : neuronMap) {
+		if (writeToNetwork(rec) == false) {
+			std::cout << "An error occured while writing to network.." << std::endl;
+			return;
+		}
+		std::cout << "\r"
+			<< "Writing neurons: "
+			<< (double(++inx) / double(totalSize)) * 100 << "%";
+	}
+	neuronWorker.flush();
+}
 
-// 	// reopen for read/write
-// 	memoryWorker.open("../SmoothBrain/Marilyn.brain", std::ios::in | std::ios::out | std::ios::binary);
-// 	neuronWorker.open("../SmoothBrain/Marilyn.neurons", std::ios::in | std::ios::out | std::ios::binary);
+bool Brain::writeToNetwork(std::pair<const std::array<char, 10>, std::vector<char>> &rec) {
+	neuronWorker.clear();
+	neuronWorker.seekp(0, std::ios_base::end);
 
-// 	for (uint64_t inx = 0; inx < totalSize; inx++) {
-// 		res.key = neuronVec[inx].key;
-// 		res.parentKey = neuronVec[inx].parentKey;
-// 		res.frequency = memoryVec[inx].frequency;
-// 		res.ch = memoryVec[inx].ch;
+	// writing [parentKey][char...'\0']
+	char parentKeyBuffer[KEY_SIZE] = {};
+	std::memcpy(parentKeyBuffer, rec.first.data(), KEY_SIZE);
+	neuronWorker.write(parentKeyBuffer, KEY_SIZE);
 
-// 		writeNewMemory(res);
+	std::vector<char> &vec = rec.second;
+	vec.push_back('\0');
+	neuronWorker.write(vec.data(), vec.size());
+
+	return true;
+}
+
+bool Brain::writeToBrain(std::pair<const std::array<char, 11>, Node> &rec) {
+	brainWorker.clear();
+	brainWorker.seekp(0, std::ios_base::end);
+	
+	// writing [parentKey][char][key][frequency]
+	char idHashBuffer[KEY_SIZE + 1] = {};
+	std::memcpy(idHashBuffer, rec.first.data(), KEY_SIZE+1);
+	brainWorker.write(idHashBuffer, KEY_SIZE+1);
+
+	char keyBuffer[KEY_SIZE] = {};
+	std::memcpy(keyBuffer, rec.second.key.data(), KEY_SIZE);
+	brainWorker.write(keyBuffer, KEY_SIZE);
+
+	brainWorker.write(reinterpret_cast<const char *>(&rec.second.frequency), sizeof(rec.second.frequency));
+
+	return true;
+}
 
 // 		double percent =
 // 			(double(inx+1) / double(totalSize)) * 100.0;
@@ -181,7 +228,6 @@ Neuron Brain::readNeuron() {
 // 			<< percent << "%)    "
 // 			<< std::flush;
 // 	}
-// }
 
 /// <summary>
 /// Writing a new memory to the neural network and smooth brain.

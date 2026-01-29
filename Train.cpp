@@ -1,4 +1,3 @@
-#include "Marilyn.h"
 #include "Train.h"
 #include "DataHelper.h"
 
@@ -20,14 +19,14 @@ void initTrainModule() {
 
 	if (!brain.loadBrain() || !brain.loadNeurons()) return;
 
-	std::cout << "Beginning file processing. This *WILL take a long time.." << std::endl;
+	std::cout << std::endl << "Beginning file processing. This *WILL take a long time.." << std::endl;
 	brain.processAttachedFile();
 }
 
 void Brain::processAttachedFile() {
 	const uint64_t totalBytes = static_cast<uint64_t>(getFileSize(inFile));
 	typedef std::istreambuf_iterator<char> buf_iter;
-	std::deque<char> window;
+	std::deque<char> window = {};
 	const size_t preloadSize = NEURON_DEPTH;
 	std::array<char, KEY_SIZE+1> parentKeyHash{};
 
@@ -52,8 +51,10 @@ void Brain::processAttachedFile() {
 		// with the root of window[0]
 		std::memcpy(parentKeyHash.data(), EMPTY_KEY.data(), KEY_SIZE);
 		for (size_t n = 0; n < window.size(); n++) {
-			parentKeyHash[KEY_SIZE] = c;
-			// brainMap[parentKeyHash];
+			// Set the characters which is the child of the current parent Key
+			parentKeyHash[KEY_SIZE] = window[n];
+
+			// Add or modify the child record in the brain
 			if (std::memcmp(brainMap[parentKeyHash].key.data(), EMPTY_KEY.data(), KEY_SIZE) == 0 
 					|| brainMap[parentKeyHash].frequency == 0) {
 				// This is a new node
@@ -61,70 +62,30 @@ void Brain::processAttachedFile() {
 				brainMap[parentKeyHash].frequency = 1;
 			}
 			else {
-				brainMap[parentKeyHash].frequency++;
+				if (brainMap[parentKeyHash].frequency < 255) {
+					brainMap[parentKeyHash].frequency++;
+				}
+			}
+
+			// Ensure the neuronMap includes this char in the parentKey's vector
+			std::array<char, KEY_SIZE> parentKey_only{};
+			std::memcpy(parentKey_only.data(), parentKeyHash.data(), KEY_SIZE);
+			std::vector<char>& vec = neuronMap[parentKey_only];
+			if (std::find(vec.begin(), vec.end(), window[n]) == vec.end()) {
+				vec.push_back(window[n]);
 			}
 
 
-
-
+			// save the current key into the parentKey for the next child
+			std::memcpy(parentKeyHash.data(), brainMap[parentKeyHash].key.data(), KEY_SIZE);
 		}
+
+		std::cout << "\r"
+			<< (double(inFile.tellg()) / double(totalBytes)) * 100.0 << "%";
 	}
+
+	std::cout << std::endl << "Saving to disk.." << std::endl;
+	saveDataToDisk();
+
+	std::cout << std::endl << "Completed." << std::endl;
 }
-
-// 	// loop to parse rest training file
-
-// 		uint64_t neuronInx = 0;
-// 		parentKey = EMPTY_KEY;
-// 		// Parse the window fully once, and build/increment the chain
-// 		
-// 		for (size_t n = 0; n < window.size(); n++) {
-// 			bool found = false;
-
-// 			// check for a child node where the 
-// 			// character is window.at(j).ch AND 
-// 			// the parent key matches. Create one if it isn't found
-// 			for (; neuronInx < neuronVec.size(); neuronInx++) {
-// 				MemoryNode& memNode = memoryVec[neuronInx];
-// 				NeuronNode& neurNode = neuronVec[neuronInx];
-// 				if (keyCompare(parentKey, neurNode.parentKey) && memNode.ch == window[n].ch) {
-// 					// match found
-// 					// increment child nodes
-// 					// set the parent key as the curr node key
-// 					found = true;
-// 					++memNode.frequency;
-// 					parentKey = memNode.key;
-// 					break;
-// 				}
-// 			}
-// 			if (found == false) {
-// 				// create a new node with the parent key and char
-// 				std::array<char, KEY_SIZE> newKey = generate10ByteKey();
-				
-// 				NeuronNode newN {newKey, parentKey};
-// 				MemoryNode newM {newKey, window.at(n).ch, 1};
-
-// 				neuronVec.push_back(newN);
-// 				memoryVec.push_back(newM);
-
-// 				keyCpy(parentKey, newKey);
-// 			}
-// 		}
-
-// 		// Update the progress message.
-// 		double percent =
-// 			(double(bytesProcessed) / double(totalBytes)) * 100.0;
-// 		std::cout << "\rProcessing: "
-// 			<< bytesProcessed << " / "
-// 			<< totalBytes << " bytes ("
-// 			<< std::fixed << std::setprecision(1)
-// 			<< percent << "%)   "
-// 			<< std::flush;
-
-// 	}
-	
-// 	// Now we need to write the training data back to disk
-// 	std::cout << std::endl << "Saving to disk.." << std::endl;
-// 	saveTrainingDataToDisk();
-
-// 	std::cout << "Completed." << std::endl;
-// }
