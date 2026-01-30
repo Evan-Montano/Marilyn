@@ -235,9 +235,57 @@ void Brain::getMeow(std::string& userInput) {
 		userInput.end()
 	);
 
+	std::array<char, KEY_SIZE> parentKey = {};
+	std::array<char, KEY_SIZE+1> compositeKey = {};
+	std::vector<char> existingChars = {};
+
 	// std::unordered_map<(parentKey, char), Node> brainMap
 	// std::unordered_map<parentKey, vector<char>> neuronMap
-	while (printedChars < maxCharsToPrint) {
-			
+	while (printedChars <= maxCharsToPrint) {
+		parentKey = EMPTY_KEY;
+		for (size_t i = 0; i <= characterStream.size(); i++) {
+			// Check neuronMap vector for existing characterStream[i]
+			// If node exists, get the key from brainMap
+			if (i < characterStream.size()) {
+				existingChars = neuronMap[parentKey];
+				if (std::find(existingChars.begin(), existingChars.end(), characterStream[i]) != existingChars.end()) {
+					std::memcpy(compositeKey.data(), parentKey.data(), KEY_SIZE);
+					compositeKey[KEY_SIZE] = characterStream[i];
+					parentKey = brainMap[compositeKey].key;
+				}
+				else {
+					// reset to root node
+					parentKey = EMPTY_KEY;
+				}
+			}
+			else {
+				// Get next char for printing
+				existingChars = neuronMap[parentKey];
+				uint8_t highestFreq = 1;
+				char charToPrint = '\0';
+				std::memcpy(compositeKey.data(), parentKey.data(), KEY_SIZE);
+				for (char c : existingChars) {
+					compositeKey[KEY_SIZE] = c;
+					if (brainMap[compositeKey].frequency >= highestFreq) {
+						charToPrint = c;
+						highestFreq = brainMap[compositeKey].frequency;
+					}
+				}
+
+				if (charToPrint != '\0') {
+					compositeKey[KEY_SIZE] = charToPrint;
+					parentKey = brainMap[compositeKey].key;
+
+					// print char to console
+					std::cout << charToPrint << std::flush;
+					printedChars++;
+					characterStream.push_back(charToPrint);
+				}
+				else {
+					return;
+				}
+			}
+
+		}
 	}
 }

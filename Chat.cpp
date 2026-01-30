@@ -1,18 +1,18 @@
 #include "Chat.h"
 #include "DataHelper.h"
 
-Brain brain;
+Brain brain1;
 std::string userChat = "";
 
 void initChatModule() {
 	std::cout << "Initializing..." << std::endl;
-	if (!brain.loadBrain() || !brain.loadNeurons()) return;
+	if (!brain1.loadBrain() || !brain1.loadNeurons()) return;
 
-
+	brain1.beginChat();
 }
 
 void Brain::beginChat() {
-	std::cout << "Thanks for talking to my cat Marilyn. Just know that she doesn't understand English that well :)"
+	std::cout << std::endl << "Thanks for talking to my cat Marilyn. Just know that she doesn't understand English that well :)"
 		<< std::endl << "Enter 'exit' to leave." << std::endl;
 
 	while (true) {
