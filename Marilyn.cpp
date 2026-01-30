@@ -11,7 +11,8 @@ int main()
     std::cout << "2) Train\n";
     std::cout << "> ";
     std::cin >> mode;
-
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    
     switch (mode)
     {
         case 1:

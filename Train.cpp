@@ -10,6 +10,7 @@ void initTrainModule() {
 	if (std::cin.peek() == '\n') {
 		std::cin.ignore();
 	}
+
 	std::getline(std::cin, path);
 	brain.inFile = std::fstream(path, std::ios::in);
 		if (!brain.inFile) {
@@ -31,19 +32,20 @@ void Brain::processAttachedFile() {
 	std::array<char, KEY_SIZE+1> parentKeyHash{};
 
 	buf_iter i(inFile), e;
-	size_t count = 0;
+	uint64_t count = 0;
+	int lastPercent = -1;
 
 	// Load the first NEURON_SIZE characters
 	for (; i != e && window.size() < preloadSize; i++) {
 		char c = *i;
-		if (c == 'n') continue;
+		if (c == '\r') continue;
 		window.push_back(c);
 	}
 
 	// loop to parse rest of training file
 	for (; i != e; i++) {
 		char c = *i;
-		if (c == '\n') continue;
+		if (c == '\r') continue;
 		if (window.size() > NEURON_DEPTH) window.pop_front();
 		window.push_back(c);
 
@@ -62,7 +64,7 @@ void Brain::processAttachedFile() {
 				brainMap[parentKeyHash].frequency = 1;
 			}
 			else {
-				if (brainMap[parentKeyHash].frequency < 255) {
+				if (brainMap[parentKeyHash].frequency < 255 && (window[n] != '\r' || window[n] != '\n')) {
 					brainMap[parentKeyHash].frequency++;
 				}
 			}
@@ -80,8 +82,13 @@ void Brain::processAttachedFile() {
 			std::memcpy(parentKeyHash.data(), brainMap[parentKeyHash].key.data(), KEY_SIZE);
 		}
 
-		std::cout << "\r"
-			<< (double(inFile.tellg()) / double(totalBytes)) * 100.0 << "%";
+		++count;
+		int percent = int((double(count) / double(totalBytes)) * 100.0);
+		if (percent != lastPercent) {
+			std::cout << "\r" << percent << "%"; 
+			lastPercent = percent;
+		}
+		
 	}
 
 	std::cout << std::endl << "Saving to disk.." << std::endl;

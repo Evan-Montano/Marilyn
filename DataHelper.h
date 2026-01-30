@@ -17,6 +17,8 @@ constexpr size_t CHAR_SIZE = 1;
 constexpr size_t NEURON_DEPTH = 8;
 inline constexpr std::array<char, KEY_SIZE> EMPTY_KEY = 
 	{ '0','0','0','0','0','0','0','0', '0', '0' };
+inline constexpr std::array<char, 4> PUNCTUATION =
+	{ '.', '!', '?' };
 
 struct BrainCell {
 	std::array<char, KEY_SIZE+1> idHash;
