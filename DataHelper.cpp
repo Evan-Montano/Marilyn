@@ -59,6 +59,7 @@ bool Brain::loadBrain() {
 
 		// Print progress update
 		std::cout << "\r"
+			<< "Loading brain: "
 			<< (double(brainWorker.tellg()) / double(fileSize)) * 100.0 << "%";
 	}
 
@@ -118,6 +119,7 @@ bool Brain::loadNeurons() {
 
 		// Print progress update
 		std::cout << "\r"
+			<< "Loading neurons: "
 			<< (double(neuronWorker.tellg()) / double(fileSize)) * 100.0 << "%";
 	}
 
@@ -220,113 +222,22 @@ bool Brain::writeToBrain(std::pair<const std::array<char, 11>, Node> &rec) {
 	return true;
 }
 
-// 		double percent =
-// 			(double(inx+1) / double(totalSize)) * 100.0;
-// 		std::cout << "\r"
-// 			<< inx << " / "
-// 			<< totalSize << " Meows saved ("
-// 			<< percent << "%)    "
-// 			<< std::flush;
-// 	}
+void Brain::getMeow(std::string& userInput) {
+	std::vector<char> characterStream;
+	const size_t maxChars = NEURON_DEPTH - 1;
+	const size_t start = userInput.size() > maxChars ? userInput.size() - maxChars : 0;
+	const size_t maxCharsToPrint = 200;
+	size_t printedChars = 0;
 
-/// <summary>
-/// Writing a new memory to the neural network and smooth brain.
-/// n should already contain the char to write as well as the parentKey.
-/// </summary>
-/// <param name="n"></param>
-/// <returns></returns>
-// void Brain::writeNewMemory(Neuron& n) {
-// 	neuronWorker.clear();
-// 	memoryWorker.clear();
-// 	neuronWorker.seekp(0, std::ios_base::end);
-// 	memoryWorker.seekp(0, std::ios_base::end);
+	characterStream.insert(
+		characterStream.begin(),
+		userInput.begin() + start,
+		userInput.end()
+	);
 
-// 	char keyBuffer[KEY_SIZE] = {};
-// 	keyCpy(keyBuffer, n.key);
-
-// 	char parentKeyBuffer[KEY_SIZE] = {};
-// 	keyCpy(parentKeyBuffer, n.parentKey);
-
-// 	// neuron writing [key][parentKey]
-// 	neuronWorker.write(keyBuffer, KEY_SIZE);
-// 	neuronWorker.write(parentKeyBuffer, KEY_SIZE);
-// 	neuronWorker.flush();
-
-// 	// memory writing [key][char][frequency]
-// 	memoryWorker.write(keyBuffer, KEY_SIZE);
-// 	memoryWorker.write(reinterpret_cast<const char*>(&n.ch), CHAR_SIZE);
-// 	memoryWorker.write(reinterpret_cast<const char*>(&n.frequency), sizeof(n.frequency));
-// 	memoryWorker.flush();
-// }
-
-// void Brain::getMeow(std::string& userInput) {
-// 	std::vector<char> characterStream;
-// 	const size_t maxChars = NEURON_DEPTH - 1;
-// 	const size_t start = userInput.size() > maxChars ? userInput.size() - maxChars : 0;
-// 	const size_t maxCharsToPrint = 200;
-// 	size_t printedChars = 0;
-
-
-// 	characterStream.insert(
-// 		characterStream.begin(),
-// 		userInput.begin() + start,
-// 		userInput.end()
-// 	);
-
-// 	// >Starting at the beginning of the chain, go down the line, child-by-child, until you get to the end of the line. 
-// 	// >If you cannot make it to the end of the line, begin at the next node and repeat.
-// 	// >When at the end of the line, find the next node (highest freq.)
-// 	// >Append the node to the end of the window
-// 	// >Attempt to find the next children in the chain
-// 	// >Repeat above if previous step failed
-// 	for (size_t start = 0; printedChars < maxCharsToPrint && start < characterStream.size(); start++) {
-// 		std::array<char, KEY_SIZE> targetParentKey = EMPTY_KEY;
-// 		int64_t lastIndex = 0;
-// 		bool found = false;
-
-// 		for (size_t end = start; end < characterStream.size(); end++) {
-// 			char targetChar = characterStream[end];
-// 			if ((lastIndex = findChild(targetParentKey, targetChar, lastIndex)) > -1) {
-// 				found = true;				
-// 			}
-// 			else break;
-// 		}
-
-// 		while (found && printedChars < maxCharsToPrint) {
-// 			// search for and attempt to print best child node
-// 			if ((lastIndex = findBestChild(targetParentKey, lastIndex)) > -1) {
-// 				// we found it >:)
-// 				characterStream.push_back(memoryVec[lastIndex].ch);
-// 				std::cout << memoryVec[lastIndex].ch << std::flush;
-// 				printedChars++;
-// 			}
-// 			else {
-// 				found = false;
-// 			}
-// 		}
-// 	}
-// }
-
-// int64_t Brain::findBestChild(std::array<char, KEY_SIZE>& parentKey, int64_t startInx) {
-// 	uint32_t bestFrequency = 0;
-// 	int64_t bestIndex = -1;
-// 	for (; startInx < neuronVec.size(); startInx++) {
-// 		if (keyCompare(parentKey, neuronVec[startInx].parentKey) && memoryVec[startInx].frequency > bestFrequency) {
-// 			parentKey = neuronVec[startInx].key;
-// 			bestFrequency = memoryVec[startInx].frequency;
-// 			bestIndex = startInx;
-// 		}
-// 	}
-// 	return bestIndex;
-// }
-
-// Helper method to return the index of a child node. Returns 0 if not found. If found, a new parentKey is assigned
-// int64_t Brain::findChild(std::array<char, KEY_SIZE>& parentKey, char target, int64_t startInx) {
-// 	for (; startInx < neuronVec.size(); startInx++) {
-// 		if (keyCompare(parentKey, neuronVec[startInx].parentKey) && memoryVec[startInx].ch == target) {
-// 			parentKey = neuronVec[startInx].key;
-// 			return startInx;
-// 		}
-// 	}
-// 	return -1;
-// }
+	// std::unordered_map<(parentKey, char), Node> brainMap
+	// std::unordered_map<parentKey, vector<char>> neuronMap
+	while (printedChars < maxCharsToPrint) {
+			
+	}
+}

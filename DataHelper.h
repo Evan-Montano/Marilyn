@@ -53,10 +53,7 @@ struct ArrayHasher {
 class Brain {
 public:
 	std::fstream inFile;
-	// bool initTraining();
-	// bool initChat();
-	// void beginChat();
-	//std::string getHighestNeruon();
+	void beginChat();
 	void processAttachedFile();
 	bool loadBrain();
 	bool loadNeurons();
@@ -71,9 +68,9 @@ private:
 	void saveDataToDisk();
 	bool writeToBrain(std::pair<const std::array<char, 11>, Node> &rec);
 	bool writeToNetwork(std::pair<const std::array<char, 10>, std::vector<char>> &rec);
+	void getMeow(std::string &userInput);
 	// void writeNewMemory(Neuron& n);
 	// void resetWorkerPos(std::fstream& worker);
-	// void getMeow(std::string &userInput);
 	// int64_t findChild(std::array<char, KEY_SIZE>& parentKey, char target, int64_t startInx = 0);
 	// int64_t findBestChild(std::array<char, KEY_SIZE>& parentKey, int64_t startInx = 0);
 	// Neuron newNeuron();
