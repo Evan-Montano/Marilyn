@@ -294,7 +294,6 @@ void Brain::getMeow(std::string& userInput) {
 					}
 				}
 				if ((charToPrint == '\n' || charToPrint == '\r') && printedChars > 0) {
-					std::cout << std::endl << "Broke from return line";
 					return;
 				}
 				if (charToPrint != '\0') {
@@ -308,18 +307,11 @@ void Brain::getMeow(std::string& userInput) {
 					if (charToPrint == ' ' && std::find(PUNCTUATION.begin(), PUNCTUATION.end(), characterStream.size() - 1) != PUNCTUATION.end()) {
 						++punct;
 						if (punct >= maxPunctuation) {
-							std::cout << std::endl << "Broke from punctuation";
 							return;
 						}
 					}
 
 					characterStream.push_back(charToPrint);
-
-					//if (std::find(PUNCTUATION.begin(), PUNCTUATION.end(), charToPrint) != PUNCTUATION.end()) ++punct;
-					/*if (punct >= maxPunctuation) {
-						std::cout << std::endl << "Broke from punctuation";
-						return;
-					}*/
 				}
 				else if (lapses <= maxLapses) {
 					parentKey = EMPTY_KEY;
@@ -329,8 +321,7 @@ void Brain::getMeow(std::string& userInput) {
 					++lapses;
 				}
 			}
-
 		}
+		if (lapses > maxLapses) return;
 	}
-	std::cout << std::endl << "Broke from max chars";
 }
