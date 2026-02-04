@@ -18,7 +18,20 @@ void initTrainModule() {
 		return;
 	}
 
-	if (!brain.loadBrain() || !brain.loadNeurons()) return;
+	{
+		std::lock_guard<std::mutex> lock(brain.coutMutex);
+		std::cout << "\n\n";
+		std::cout.flush();
+	}
+
+	auto brainFuture = std::async(std::launch::async, [&] {
+		return brain.loadBrain();
+	});
+	auto neuronFuture = std::async(std::launch::async, [&] {
+		return brain.loadNeurons();
+	});
+
+	if (!brainFuture.get() || !neuronFuture.get()) return;
 
 	std::cout << std::endl << "Beginning file processing. This *WILL take a long time.." << std::endl;
 	brain.processAttachedFile();

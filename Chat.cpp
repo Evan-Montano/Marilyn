@@ -6,7 +6,21 @@ std::string userChat = "";
 
 void initChatModule() {
 	std::cout << "Initializing..." << std::endl;
-	if (!brain1.loadBrain() || !brain1.loadNeurons()) return;
+
+	{
+		std::lock_guard<std::mutex> lock(brain1.coutMutex);
+		std::cout << "\n\n";
+		std::cout.flush();
+	}
+
+	auto brainFuture = std::async(std::launch::async, [&] {
+		return brain1.loadBrain();
+	});
+	auto neuronFuture = std::async(std::launch::async, [&] {
+		return brain1.loadNeurons();
+	});
+
+	if (!brainFuture.get() || !neuronFuture.get()) return;
 
 	brain1.beginChat();
 }

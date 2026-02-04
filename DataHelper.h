@@ -11,6 +11,8 @@
 #include <deque>
 #include <unordered_map>
 #include <algorithm>
+#include <future>
+#include <mutex>
 
 constexpr size_t KEY_SIZE = 10;
 constexpr size_t CHAR_SIZE = 1;
@@ -36,6 +38,11 @@ struct Node {
 	uint8_t frequency;
 };
 
+struct Candidate {
+	char c;
+	uint8_t freq;
+};
+
 std::array<char, KEY_SIZE> generate10ByteKey();
 
 // Custom hash function for std::array<char, N>
@@ -55,6 +62,7 @@ struct ArrayHasher {
 class Brain {
 public:
 	std::fstream inFile;
+	std::mutex coutMutex;
 	void beginChat();
 	void processAttachedFile();
 	bool loadBrain();
@@ -71,9 +79,8 @@ private:
 	bool writeToBrain(std::pair<const std::array<char, 11>, Node> &rec);
 	bool writeToNetwork(std::pair<const std::array<char, 10>, std::vector<char>> &rec);
 	void getMeow(std::string &userInput);
-	// void writeNewMemory(Neuron& n);
-	// void resetWorkerPos(std::fstream& worker);
-	// int64_t findChild(std::array<char, KEY_SIZE>& parentKey, char target, int64_t startInx = 0);
-	// int64_t findBestChild(std::array<char, KEY_SIZE>& parentKey, int64_t startInx = 0);
-	// Neuron newNeuron();
 };
+
+inline void moveCursorToLine(int line) {
+	std::cout << "\033[" << line << ";1H";
+}

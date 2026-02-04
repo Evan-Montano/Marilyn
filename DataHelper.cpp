@@ -61,6 +61,8 @@ bool Brain::loadBrain() {
 		// Print progress update
 		int percent = int((double(brainWorker.tellg()) / double(fileSize)) * 100.0);
 		if (percent != lastPercent) { // only print when percentage increases
+			std::lock_guard<std::mutex> lock(coutMutex);
+			moveCursorToLine(6);
 			std::cout << "\rLoading brain: " << percent << "%";
 			lastPercent = percent;
 		}
@@ -125,6 +127,8 @@ bool Brain::loadNeurons() {
 		// Print progress update
 		int percent = int((double(neuronWorker.tellg()) / double(fileSize)) * 100.0);
 		if (percent != lastPercent) { // only print when percentage increases
+			std::lock_guard<std::mutex> lock(coutMutex);
+			moveCursorToLine(7);
 			std::cout << "\rLoading neurons: " << percent << "%";
 			lastPercent = percent;
 		}
@@ -247,6 +251,7 @@ void Brain::getMeow(std::string& userInput) {
 	const size_t maxCharsToPrint = 200;
 	const size_t maxLapses = 100;
 	const size_t maxPunctuation = 3;
+	bool returnLineHit = false;
 	size_t printedChars = 0;
 
 	characterStream.insert(
@@ -286,16 +291,46 @@ void Brain::getMeow(std::string& userInput) {
 				uint8_t highestFreq = 0;
 				char charToPrint = '\0';
 				std::memcpy(compositeKey.data(), parentKey.data(), KEY_SIZE);
+				std::vector<Candidate> candidates;
+				constexpr size_t TOP = 5;
+				
+				// collect potential next chars
 				for (char c : existingChars) {
 					compositeKey[KEY_SIZE] = c;
-					if (brainMap[compositeKey].frequency >= highestFreq) {
-						charToPrint = c;
-						highestFreq = brainMap[compositeKey].frequency;
+					candidates.push_back({ c, brainMap[compositeKey].frequency });
+				}
+
+				if (candidates.size() > 0) {
+					// get the top 5 highest
+					std::sort(candidates.begin(), candidates.end(),
+						[](const Candidate& a, const Candidate& b) {
+							return a.freq > b.freq;
+						});
+					if (candidates.size() > TOP) candidates.resize(TOP);
+
+					// weighted random choice between the available options
+					static std::mt19937 rng{ std::random_device{}() };
+					std::vector<int> weights;
+					for (const auto& c : candidates)
+						weights.push_back(c.freq);
+
+					std::discrete_distribution<size_t> dist(weights.begin(), weights.end());
+					charToPrint = candidates[dist(rng)].c;
+				}
+
+				if ((charToPrint == '\n' || charToPrint == '\r') && printedChars > 0) {
+					if (printedChars < 1 && !returnLineHit) {
+						compositeKey[KEY_SIZE] = charToPrint;
+						parentKey = brainMap[compositeKey].key;
+						characterStream.push_back(charToPrint);
+						returnLineHit = true;
+						continue;
+					}
+					else {
+						return;
 					}
 				}
-				if ((charToPrint == '\n' || charToPrint == '\r') && printedChars > 0) {
-					return;
-				}
+
 				if (charToPrint != '\0') {
 					compositeKey[KEY_SIZE] = charToPrint;
 					parentKey = brainMap[compositeKey].key;
