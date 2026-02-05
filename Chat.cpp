@@ -5,7 +5,7 @@ Brain brain1;
 std::string userChat = "";
 
 void initChatModule() {
-	std::cout << "Initializing..." << std::endl;
+	std::cout << "Initializing. This will take 30-60s..." << std::endl;
 
 	{
 		std::lock_guard<std::mutex> lock(brain1.coutMutex);
