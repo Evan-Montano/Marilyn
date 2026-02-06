@@ -73,7 +73,10 @@ void Brain::processAttachedFile() {
 			if (std::memcmp(brainMap[parentKeyHash].key.data(), EMPTY_KEY.data(), KEY_SIZE) == 0 
 					|| brainMap[parentKeyHash].frequency == 0) {
 				// This is a new node
-				brainMap[parentKeyHash].key = generate10ByteKey();
+				brainMap[parentKeyHash].key = generate6ByteKey();
+				if (neuronMap.contains(brainMap[parentKeyHash].key)) {
+					brainMap[parentKeyHash].key = generate6ByteKey();
+				}
 				brainMap[parentKeyHash].frequency = 1;
 			}
 			else {

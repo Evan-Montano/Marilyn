@@ -27,6 +27,7 @@ void initChatModule() {
 
 void Brain::beginChat() {
 	std::cout << std::endl << "Thanks for talking to my cat Marilyn. Just know that she doesn't understand English that well :)"
+		<< std::endl << "Tip: Punctuation helps with responses."
 		<< std::endl << "Enter 'exit' to leave." << std::endl;
 
 	while (true) {

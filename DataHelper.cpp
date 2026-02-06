@@ -1,5 +1,4 @@
 #include "DataHelper.h"
-#include <cstddef>
 
 const char availableChars[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#@$.()*&^%-_=+";
 std::random_device dev;
@@ -10,7 +9,7 @@ std::uniform_int_distribution<std::size_t> dist(0, strlen(availableChars)-1);
 /// Generates a seriable key to be used as an identifier.
 /// </summary>
 /// <returns>8-Byte std::string</returns>
-std::array<char, KEY_SIZE> generate10ByteKey() {
+std::array<char, KEY_SIZE> generate6ByteKey() {
 	std::array<char, KEY_SIZE> res{};
 
 	for (size_t i = 0; i < KEY_SIZE; ++i) {
@@ -47,7 +46,7 @@ bool Brain::loadBrain() {
 	// === brain === //
 	// std::unordered_map<(parentKey+char), Node>
 	// 25 Byte Blocks:
-	// [[ParentKey(10)][char(1)][Key(10)][Frequency(4)]]
+	// [[ParentKey(6)][char(1)][Key(6)][Frequency(4)]]
 	BrainCell cell{};
 	Node node{};
 	std::array<char, KEY_SIZE + 1> compositeKey{};
@@ -115,8 +114,8 @@ bool Brain::loadNeurons() {
 
 	// === neurons === //
 	// std::unordered_map<parentKey, vector<char>>
-	// 10 + (N*1 + 1) Byte Blocks:
-	// [ParentKey(10)]['a', 'b', '\0']
+	// 6 + (N*1 + 1) Byte Blocks:
+	// [ParentKey(6)]['a', 'b', '\0']
 	Neuron neuron{};
 	std::array<char, KEY_SIZE> parentKey{};
 	int lastPercent = -1;
@@ -172,45 +171,54 @@ void Brain::saveDataToDisk() {
 	brainWorker.open("../../../SmoothBrain/Marilyn.brain", std::ios::in | std::ios::out | std::ios::binary);
  	neuronWorker.open("../../../SmoothBrain/Marilyn.neurons", std::ios::in | std::ios::out | std::ios::binary);
 
-	uint64_t inx = 0;
-	uint64_t totalSize = brainMap.size();
-	int lastPercent = -1;
-	for (std::pair<const std::array<char, 11>, Node> & rec : brainMap) {
-		if (writeToBrain(rec) == false) {
-			std::cout << "An error occured while writing to brain.." << std::endl;
-			return;
-		}
+	auto brainFuture = std::async(std::launch::async, [&] {
+		uint64_t inx = 0;
+		uint64_t totalSize = brainMap.size();
+		int lastPercent = -1;
+		for (std::pair<const std::array<char, 7>, Node>& rec : brainMap) {
+			if (writeToBrain(rec) == false) {
+				std::cout << "An error occured while writing to brain.." << std::endl;
+				return;
+			}
 
-		++inx;
-		int percent = int((double(inx) / double(totalSize)) * 100.0);
-		if (percent != lastPercent) { // only print when percentage increases
-			std::cout << "\rWriting brain: " << percent << "%";
-			lastPercent = percent;
+			++inx;
+			int percent = int((double(inx) / double(totalSize)) * 100.0);
+			if (percent != lastPercent) { // only print when percentage increases
+				std::lock_guard<std::mutex> lock(coutMutex);
+				moveCursorToLine(14);
+				std::cout << "\rWriting brain: " << percent << "%";
+				lastPercent = percent;
+			}
 		}
-	}
-	brainWorker.flush();
+		brainWorker.flush();
+	});
 
-	inx = 0;
-	totalSize = neuronMap.size();
-	lastPercent = -1;
-	for (std::pair<const std::array<char, 10>, std::vector<char>> & rec : neuronMap) {
-		if (writeToNetwork(rec) == false) {
-			std::cout << "An error occured while writing to network.." << std::endl;
-			return;
+	auto neuronFuture = std::async(std::launch::async, [&] {
+		uint64_t inx = 0;
+		uint64_t totalSize = neuronMap.size();
+		int lastPercent = -1;
+		for (std::pair<const std::array<char, 6>, std::vector<char>>& rec : neuronMap) {
+			if (writeToNetwork(rec) == false) {
+				std::cout << "An error occured while writing to network.." << std::endl;
+				return;
+			}
+
+			++inx;
+			int percent = int((double(inx) / double(totalSize)) * 100.0);
+			if (percent != lastPercent) {
+				std::lock_guard<std::mutex> lock(coutMutex);
+				moveCursorToLine(15);
+				std::cout << "\rWriting neurons: " << percent << "%";
+				lastPercent = percent;
+			}
 		}
-		
-		++inx;
-		int percent = int((double(inx) / double(totalSize)) * 100.0);
-		if (percent != lastPercent) {
-			std::cout << "\rWriting neurons: " << percent << "%";
-			lastPercent = percent;
-		}
-	}
-	neuronWorker.flush();
+		neuronWorker.flush();
+	});
+
 	std::cout << std::endl << std::flush;
 }
 
-bool Brain::writeToNetwork(std::pair<const std::array<char, 10>, std::vector<char>> &rec) {
+bool Brain::writeToNetwork(std::pair<const std::array<char, KEY_SIZE>, std::vector<char>> &rec) {
 	neuronWorker.clear();
 	neuronWorker.seekp(0, std::ios_base::end);
 
@@ -226,7 +234,7 @@ bool Brain::writeToNetwork(std::pair<const std::array<char, 10>, std::vector<cha
 	return true;
 }
 
-bool Brain::writeToBrain(std::pair<const std::array<char, 11>, Node> &rec) {
+bool Brain::writeToBrain(std::pair<const std::array<char, KEY_SIZE+1>, Node> &rec) {
 	brainWorker.clear();
 	brainWorker.seekp(0, std::ios_base::end);
 	
@@ -248,7 +256,7 @@ void Brain::getMeow(std::string& userInput) {
 	std::vector<char> characterStream;
 	const size_t maxChars = NEURON_DEPTH - 1;
 	const size_t start = userInput.size() > maxChars ? userInput.size() - maxChars : 0;
-	const size_t maxCharsToPrint = 200;
+	const size_t maxCharsToPrint = 500;
 	const size_t maxLapses = 100;
 	const size_t maxPunctuation = 3;
 	bool returnLineHit = false;
@@ -292,27 +300,29 @@ void Brain::getMeow(std::string& userInput) {
 				char charToPrint = '\0';
 				std::memcpy(compositeKey.data(), parentKey.data(), KEY_SIZE);
 				std::vector<Candidate> candidates;
-				constexpr size_t TOP = 5;
+				constexpr size_t TOP = 3;
+				constexpr double EXP = 3;
 				
 				// collect potential next chars
 				for (char c : existingChars) {
 					compositeKey[KEY_SIZE] = c;
-					candidates.push_back({ c, brainMap[compositeKey].frequency });
+					double weight = std::pow(brainMap[compositeKey].frequency, EXP);
+					candidates.push_back({ c, weight });
 				}
 
 				if (candidates.size() > 0) {
 					// get the top 5 highest
 					std::sort(candidates.begin(), candidates.end(),
 						[](const Candidate& a, const Candidate& b) {
-							return a.freq > b.freq;
+							return a.weight > b.weight;
 						});
 					if (candidates.size() > TOP) candidates.resize(TOP);
 
 					// weighted random choice between the available options
 					static std::mt19937 rng{ std::random_device{}() };
-					std::vector<int> weights;
+					std::vector<double> weights;
 					for (const auto& c : candidates)
-						weights.push_back(c.freq);
+						weights.push_back(c.weight);
 
 					std::discrete_distribution<size_t> dist(weights.begin(), weights.end());
 					charToPrint = candidates[dist(rng)].c;

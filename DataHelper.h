@@ -6,19 +6,19 @@
 #include <iterator>
 #include <random>
 #include <vector>
-#include <cstring>
 #include <array>
 #include <deque>
 #include <unordered_map>
 #include <algorithm>
 #include <future>
 #include <mutex>
+#include <cmath>
 
-constexpr size_t KEY_SIZE = 10;
+constexpr size_t KEY_SIZE = 6;
 constexpr size_t CHAR_SIZE = 1;
-constexpr size_t NEURON_DEPTH = 8;
+constexpr size_t NEURON_DEPTH = 14;
 inline constexpr std::array<char, KEY_SIZE> EMPTY_KEY = 
-	{ '0','0','0','0','0','0','0','0', '0', '0' };
+	{ '0','0','0','0','0','0' };
 inline constexpr std::array<char, 4> PUNCTUATION =
 	{ '.', '!', '?' };
 
@@ -40,10 +40,10 @@ struct Node {
 
 struct Candidate {
 	char c;
-	uint8_t freq;
+	double weight;
 };
 
-std::array<char, KEY_SIZE> generate10ByteKey();
+std::array<char, KEY_SIZE> generate6ByteKey();
 
 // Custom hash function for std::array<char, N>
 struct ArrayHasher {
@@ -76,8 +76,8 @@ private:
 	Neuron readNeuron();
 	std::streampos getFileSize(std::fstream& file);
 	void saveDataToDisk();
-	bool writeToBrain(std::pair<const std::array<char, 11>, Node> &rec);
-	bool writeToNetwork(std::pair<const std::array<char, 10>, std::vector<char>> &rec);
+	bool writeToBrain(std::pair<const std::array<char, KEY_SIZE+1>, Node> &rec);
+	bool writeToNetwork(std::pair<const std::array<char, KEY_SIZE>, std::vector<char>> &rec);
 	void getMeow(std::string &userInput);
 };
 
